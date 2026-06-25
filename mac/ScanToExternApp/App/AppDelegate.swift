@@ -63,8 +63,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             .sink { [weak self] (text, source) in
                 self?.menuBarController?.setLastScan(text)
 
-                // Phase 3: Show preview toast. On inject (or auto-timeout), optionally run vision/AI then route.
+                // Phase 3: Show preview toast (unless disabled in Settings). On inject (or auto-timeout), run vision/AI then route.
                 guard let self = self else { return }
+
+                if !SettingsStore.shared.previewEnabled {
+                    // Direct path when preview disabled
+                    Task {
+                        let processed = await AIProcessor.shared.process(text)
+                        self.injectionRouter.route(processed)
+                        if SettingsStore.shared.historyEnabled {
+                            let rec = ScanRecord(text: text, processedText: processed != text ? processed : nil, timestamp: Date(), source: "hardware", injectedTo: NSWorkspace.shared.frontmostApplication?.bundleIdentifier, aiMode: SettingsStore.shared.aiMode)
+                            try? ScanHistoryStore.shared.save(rec)
+                        }
+                    }
+                    return
+                }
 
                 self.previewController.showPreview(
                     text: text,
