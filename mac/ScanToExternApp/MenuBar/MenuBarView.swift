@@ -119,8 +119,11 @@ struct MenuBarView: View {
         .padding(12)
         .frame(width: 320, height: 480)
         .onAppear {
-            // TODO: Bind to real @Published from HardwareManager + SettingsStore
-            // For now skeleton only
+            // Sync initial state from the live HardwareManager (controller is also updated by AppDelegate sinks)
+            connectionStatus = HardwareManager.shared.connectionState.rawValue
+            let dev = HardwareManager.shared.deviceName
+            if !dev.isEmpty { deviceInfo = dev }
+            battery = HardwareManager.shared.batteryPercent
             connectionStatus = controller.connectionState.rawValue
         }
         .onReceive(controller.$connectionState) { state in
