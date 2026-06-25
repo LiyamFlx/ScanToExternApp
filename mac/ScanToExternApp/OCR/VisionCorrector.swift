@@ -61,11 +61,8 @@ final class VisionCorrector {
     }
 
     private func captureFrontmostWindow() -> CGImage? {
-        guard let frontApp = NSWorkspace.shared.frontmostApplication else { return nil }
-        let pid = frontApp.processIdentifier
-
-        // Capture all windows on screen and pick the front one belonging to the app is complex.
-        // Simpler reliable approach: capture the entire screen then crop, or use CGWindowListCreateImage with option for onscreen.
+        // Capture all windows on screen (the spec notes we don't have the original scan image).
+        // Simpler reliable approach for correction: capture the entire screen area.
         let windowListOption = CGWindowListOption.optionOnScreenOnly
         let image = CGWindowListCreateImage(
             CGRect.null, // full union of windows
