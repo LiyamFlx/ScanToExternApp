@@ -1,0 +1,81 @@
+/* ScanToExternApp v5.0 — Windows shared stylesheet */
+
+:root {
+  --bg:        #1e1e2e;
+  --bg2:       #2a2a3e;
+  --border:    rgba(255,255,255,0.08);
+  --text:      #e0e0f0;
+  --text-muted:#8888aa;
+  --accent:    #6c8fff;
+  --green:     #4caf7d;
+  --red:       #e05c5c;
+  --radius:    10px;
+  --font:      -apple-system, "Segoe UI", system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font);
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+/* ── Utility ── */
+.muted  { color: var(--text-muted); }
+.green  { color: var(--green); }
+.red    { color: var(--red); }
+.accent { color: var(--accent); }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg2);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  transition: background .15s;
+}
+.btn:hover   { background: #333350; }
+.btn.primary { background: var(--accent); border-color: transparent; color: #fff; }
+.btn.primary:hover { background: #5577ee; }
+.btn.danger  { background: var(--red);    border-color: transparent; color: #fff; }
+.btn.danger:hover  { background: #c04444; }
+
+input[type="text"],
+input[type="password"],
+textarea,
+select {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font: inherit;
+  padding: 6px 10px;
+  outline: none;
+  width: 100%;
+}
+input:focus, textarea:focus, select:focus {
+  border-color: var(--accent);
+}
+
+/* Status dot */
+.dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.dot.connected    { background: var(--green); }
+.dot.disconnected { background: var(--red); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15); border-radius: 2px; }

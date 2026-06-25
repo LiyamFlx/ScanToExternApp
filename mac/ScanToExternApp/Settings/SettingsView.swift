@@ -36,7 +36,7 @@ struct SettingsView: View {
                 }
                 SecureField("Anthropic Claude API Key (opt-in)", text: $settings.claudeAPIKey)
                     .textContentType(.password)
-                Text("Key is stored in UserDefaults for demo. Use Keychain in shipping build.")
+                Text("Stored securely in Keychain (com.topscan.ScanToExternApp).")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }

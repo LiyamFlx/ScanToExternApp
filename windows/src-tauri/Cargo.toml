@@ -1,0 +1,65 @@
+[package]
+name = "scan-to-extern-app"
+version = "5.0.0"
+edition = "2021"
+description = "ScanToExternApp v5.0 — Windows Tauri 2.0 system tray companion for Scanmarker"
+authors = ["Topscan Ltd."]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri            = { version = "2", features = ["tray-icon", "image-png"] }
+tauri-plugin-shell = "2"
+
+# Serialization
+serde            = { version = "1", features = ["derive"] }
+serde_json       = "1"
+
+# Async runtime
+tokio            = { version = "1", features = ["full"] }
+futures-util     = "0.3"
+anyhow           = "1"
+
+# WebSocket server (browser extension bridge, same protocol as Mac)
+tokio-tungstenite = "0.24"
+
+# Bluetooth LE — Nordic UART Service (NUS), same UUIDs as Mac
+btleplug         = "0.11"
+
+# USB serial (COM port) — Silicon Labs VCP, 115200 8N1
+serialport       = "4"
+
+# SQLite scan history — same schema as Mac
+rusqlite         = { version = "0.31", features = ["bundled"] }
+
+# Cloud AI opt-in (Claude Haiku, same user key as Mac)
+reqwest          = { version = "0.12", features = ["json", "rustls-tls"] }
+
+# Clipboard injection fallback
+arboard          = "3"
+
+# Keyboard / mouse simulation for Ctrl+V fallback
+enigo            = "0.2"
+
+# Platform data dirs
+dirs             = "5"
+
+# Logging
+log              = "0.4"
+env_logger       = "0.11"
+
+# UUIDs for scan record IDs
+uuid             = { version = "1", features = ["v4"] }
+
+# Timestamp
+chrono           = { version = "0.4", features = ["serde"] }
+
+# Windows-specific: UI Automation primary injector
+[target.'cfg(windows)'.dependencies]
+uiautomation     = "0.3"
+windows-credentials = "0.2"   # Windows Credential Manager for API key storage
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
