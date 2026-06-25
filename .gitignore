@@ -1,0 +1,15 @@
+.DS_Store
+build/
+*.xcuserdata
+*.xcarchive
+*.xcodeproj/project.xcworkspace/
+DerivedData/
+*.log
+*.swp
+target/
+node_modules/
+dist/
+*.dmg
+*.msi
+*.exe
+*.pkg
