@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "ScanToExternApp",
+  "version": "5.0.0",
+  "description": "Injects Scanmarker pen scanner text into any web app (Google Docs, Gmail, etc). Requires the native ScanToExternApp companion.",
+  "permissions": ["activeTab", "scripting"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}

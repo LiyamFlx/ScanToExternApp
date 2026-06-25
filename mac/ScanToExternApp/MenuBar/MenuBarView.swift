@@ -142,31 +142,5 @@ struct MenuBarView: View {
     }
 }
 
-// Placeholder views (full impl in Phase 5/7)
-struct HistoryView: View {
-    var body: some View {
-        VStack {
-            Text("Scan History")
-                .font(.title)
-            Text("(Coming in Phase 5)")
-                .foregroundColor(.secondary)
-            Button("Close") { /* handled by sheet */ }
-        }
-        .padding()
-        .frame(width: 500, height: 400)
-    }
-}
-
-struct SettingsView: View {
-    var body: some View {
-        VStack {
-            Text("Settings")
-                .font(.title)
-            Text("(Coming in Phase 7)")
-                .foregroundColor(.secondary)
-            Button("Close") { /* handled by sheet */ }
-        }
-        .padding()
-        .frame(width: 480, height: 420)
-    }
-}
+// Full implementations live in ../History/HistoryView.swift and ../Settings/SettingsView.swift
+// (included via the SPM target / Xcode sources)

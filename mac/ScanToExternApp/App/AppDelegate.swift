@@ -1,12 +1,18 @@
 import SwiftUI
 import AppKit
 import Combine
+// History / settings / preview / ocr / injection are co-located in the module and auto-included
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     var statusItem: NSStatusItem!
     var popover: NSPopover!
     var menuBarController: MenuBarController!
     private var cancellables = Set<AnyCancellable>()
+
+    // Core pipeline singletons (will be expanded with preview/AI/history)
+    private let injectionRouter = InjectionRouter()
+    private let previewController = PreviewWindowController()
+    private let visionCorrector = VisionCorrector()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // LSUIElement = true in Info.plist hides from Dock and Cmd+Tab
@@ -52,15 +58,46 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             .receive(on: RunLoop.main)
             .sink { [weak self] (text, source) in
                 self?.menuBarController?.setLastScan(text)
-                // Future: trigger preview + injection pipeline here
-                print("[App] Received scan from \(source), length=\(text.count)")
+
+                // Phase 3: Show preview toast. On inject (or auto-timeout), optionally run vision/AI then route.
+                guard let self = self else { return }
+
+                self.previewController.showPreview(
+                    text: text,
+                    onInject: { finalText in
+                        // Optional secondary OCR correction (can be conditional on setting or low-trust heuristic)
+                        self.visionCorrector.correct(hardwareText: finalText) { corrected in
+                            // TODO Phase 4: run AIProcessor here based on SettingsStore
+                            let toInject = corrected
+                            self.injectionRouter.route(toInject)
+
+                            // Persist to history (if enabled)
+                            if SettingsStore.shared.historyEnabled {
+                                let record = ScanRecord(
+                                    text: finalText,
+                                    processedText: corrected != finalText ? corrected : nil,
+                                    timestamp: Date(),
+                                    source: "hardware",
+                                    injectedTo: NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
+                                    aiMode: SettingsStore.shared.aiMode
+                                )
+                                try? ScanHistoryStore.shared.save(record)
+                            }
+
+                            print("[App] Preview accepted — injected after correction (\(toInject.count) chars)")
+                        }
+                    },
+                    onDiscard: {
+                        print("[App] Preview discarded by user")
+                    }
+                )
             }
             .store(in: &cancellables)
 
         // Onboarding / permissions
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
             PermissionsManager.shared.checkAll()
-            // In production: if !hasAccessibility { PermissionsManager.shared.requestAccessibility() }
+            self?.injectionRouter.requestAXPermissionIfNeeded()
         }
 
         print("[ScanToExternApp] v5.0 menubar app launched. Bundle ID: com.topscan.ScanToExternApp")
