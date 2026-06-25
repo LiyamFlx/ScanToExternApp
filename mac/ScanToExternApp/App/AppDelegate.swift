@@ -67,24 +67,25 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     onInject: { finalText in
                         // Optional secondary OCR correction (can be conditional on setting or low-trust heuristic)
                         self.visionCorrector.correct(hardwareText: finalText) { corrected in
-                            // TODO Phase 4: run AIProcessor here based on SettingsStore
-                            let toInject = corrected
-                            self.injectionRouter.route(toInject)
+                            Task {
+                                let aiProcessed = await AIProcessor.shared.process(corrected)
+                                self.injectionRouter.route(aiProcessed)
 
-                            // Persist to history (if enabled)
-                            if SettingsStore.shared.historyEnabled {
-                                let record = ScanRecord(
-                                    text: finalText,
-                                    processedText: corrected != finalText ? corrected : nil,
-                                    timestamp: Date(),
-                                    source: "hardware",
-                                    injectedTo: NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
-                                    aiMode: SettingsStore.shared.aiMode
-                                )
-                                try? ScanHistoryStore.shared.save(record)
+                                // Persist to history (if enabled)
+                                if SettingsStore.shared.historyEnabled {
+                                    let record = ScanRecord(
+                                        text: finalText,
+                                        processedText: aiProcessed != finalText ? aiProcessed : nil,
+                                        timestamp: Date(),
+                                        source: "hardware",
+                                        injectedTo: NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
+                                        aiMode: SettingsStore.shared.aiMode
+                                    )
+                                    try? ScanHistoryStore.shared.save(record)
+                                }
+
+                                print("[App] Preview accepted — injected after AI (\(aiProcessed.count) chars)")
                             }
-
-                            print("[App] Preview accepted — injected after correction (\(toInject.count) chars)")
                         }
                     },
                     onDiscard: {
