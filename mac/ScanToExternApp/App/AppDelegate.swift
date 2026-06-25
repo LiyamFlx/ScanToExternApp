@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import Combine
+import Sparkle
 // History / settings / preview / ocr / injection are co-located in the module and auto-included
 
 class AppDelegate: NSObject, NSApplicationDelegate {
@@ -10,9 +11,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var cancellables = Set<AnyCancellable>()
 
     // Core pipeline singletons (will be expanded with preview/AI/history)
-    private let injectionRouter = InjectionRouter()
-    private let previewController = PreviewWindowController()
+    private let injectionRouter = InjectionRouter.shared
+    private let previewController = PreviewWindowController.shared
     private let visionCorrector = VisionCorrector()
+
+    // Sparkle 2 auto-updater (configured via Info.plist SUFeedURL + SUPublicEDKey)
+    private let updaterController = SPUStandardUpdaterController(
+        startingUpdater: true,
+        updaterDelegate: nil,
+        userDriverDelegate: nil
+    )
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // LSUIElement = true in Info.plist hides from Dock and Cmd+Tab
@@ -29,6 +37,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             let debugItem = NSMenuItem(title: "Debug: Simulate Scan", action: #selector(debugSimulateScan), keyEquivalent: "")
             debugItem.target = self
             rightClickMenu.addItem(debugItem)
+
+            let updateItem = NSMenuItem(title: "Check for Updates…", action: #selector(checkForUpdates), keyEquivalent: "")
+            updateItem.target = self
+            rightClickMenu.addItem(updateItem)
+
             rightClickMenu.addItem(NSMenuItem.separator())
             rightClickMenu.addItem(withTitle: "Quit", action: #selector(quitApp), keyEquivalent: "q")
             // Note: for mixed left/right, we keep menu on statusItem and handle left separately
@@ -118,6 +131,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self?.injectionRouter.requestAXPermissionIfNeeded()
         }
 
+        // Apply launch at login based on setting (and sync)
+        LaunchAtLoginManager.syncWithSetting()
+
         print("[ScanToExternApp] v5.0 menubar app launched. Bundle ID: com.topscan.ScanToExternApp")
     }
 
@@ -139,7 +155,37 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         HardwareManager.shared.simulateScan()
     }
 
+    @objc private func checkForUpdates() {
+        updaterController.checkForUpdates(nil)
+    }
+
     func applicationWillTerminate(_ aNotification: Notification) {
         // Future: stop hardware managers, close WS server gracefully
+    }
+
+    // Backwards compatibility: scan2extern:// scheme (spec says keep for compat only; primary is direct injection + WS)
+    func application(_ application: NSApplication, open urls: [URL]) {
+        for url in urls {
+            if url.scheme?.lowercased() == "scan2extern" {
+                // Example: scan2extern://inject?text=Hello%20World
+                if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+                   let textItem = components.queryItems?.first(where: { $0.name == "text" })?.value,
+                   let decoded = textItem.removingPercentEncoding {
+                    // For compat we still go through the normal preview + pipeline
+                    DispatchQueue.main.async {
+                        PreviewWindowController.shared.showPreview(
+                            text: decoded,
+                            onInject: { final in
+                                Task {
+                                    let processed = await AIProcessor.shared.process(final)
+                                    InjectionRouter.shared.route(processed)
+                                }
+                            },
+                            onDiscard: {}
+                        )
+                    }
+                }
+            }
+        }
     }
 }

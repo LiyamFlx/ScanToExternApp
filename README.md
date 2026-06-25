@@ -11,40 +11,28 @@ See CLAUDE.md for the full master build prompt and phased implementation instruc
 
 ## Quick Start (macOS)
 
-### 1. Open in Xcode (recommended)
-1. Open Xcode.
-2. File > New > Project > macOS > App.
-3. Product Name: ScanToExternApp
-4. Interface: SwiftUI, Language: Swift. Uncheck Core Data / tests / cloudkit for now.
-5. Set Deployment Target: macOS 13.0
-6. Bundle ID: com.topscan.ScanToExternApp
-7. In the project:
-   - Delete the default generated files (ContentView.swift etc) or keep App structure.
-   - Drag or "Add Files" the contents of `mac/ScanToExternApp/` (App/, MenuBar/, Hardware/, etc.)
-   - File > Add Packages... and add the four dependencies listed in `mac/Package.swift`:
-     - GRDB.swift
-     - SwiftyJSON/SwiftyJSON
-     - sparkle-project/Sparkle
-     - armadsen/ORSSerialPort
-   - Copy or set the Info.plist from `mac/ScanToExternApp/Resources/Info.plist` into the target (or merge keys).
-   - In Build Settings: enable Hardened Runtime.
-   - In Signing & Capabilities: add the two usage descriptions if not in plist, and **disable** App Sandbox.
-   - Set LSUIElement = YES (in plist).
-   - Add a Run script phase or just build.
-8. Build & Run. The app should appear only as a menubar icon (no Dock).
+**Detailed click-by-click instructions: [XCODE_SETUP.md](./XCODE_SETUP.md)**
 
-### 2. Alternative: use the SPM package for core validation
-```bash
-cd mac
-swift build
-```
+### High-level summary
+1. Create a new macOS → App project in Xcode (SwiftUI).
+2. Drag the contents of `mac/ScanToExternApp/` into the project.
+3. Add the 4 required SPM packages (GRDB.swift, SwiftyJSON/SwiftyJSON, Sparkle, ORSSerialPort).
+4. Use the provided `Resources/Info.plist` (critical: LSUIElement = true, descriptions, no App Sandbox).
+5. Disable App Sandbox + enable Hardened Runtime in the target.
+6. Set deployment target to macOS 13.0.
+7. Build & Run → pure menubar app.
 
-### 3. After build in Xcode
-- Grant Accessibility permission when prompted (for text injection).
-- **Easiest testing (no hardware needed):** Right-click the menubar icon → "Debug: Simulate Scan", or click the "Test Scan" button in the popover.
-  - This exercises the *full pipeline*: floating preview toast → optional Vision correction → AI processing (per Settings) → AXUIElement or clipboard fallback → history save.
-- Real hardware: Plug Scanmarker USB or pair Bluetooth. The hardware layer receives UTF-8 text chunks (observe in Console).
-- Preview toast: bottom-right, editable, auto-injects (or click Inject/Discard). Works for native apps + (via extension) web apps.
+### Test the full app instantly (no hardware/Scanmarker needed)
+Right-click the menubar icon → **"Debug: Simulate Scan"**, or use the **"Test Scan"** button in the popover.
+
+This exercises the complete pipeline:
+- Configurable preview toast (edit + auto-inject after your timeout)
+- Vision re-OCR
+- AI (on-device or Claude if you entered a key in Settings)
+- AX or clipboard injection into the focused app
+- Save to History (searchable + re-inject works)
+
+See XCODE_SETUP.md for the exact steps and troubleshooting.
 
 ## Project Layout
 See CLAUDE.md "Project Structure" section.

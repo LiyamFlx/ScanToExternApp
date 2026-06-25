@@ -32,4 +32,8 @@ class PermissionsManager: ObservableObject {
             }
         }
     }
+
+    var allCriticalPermissionsGranted: Bool {
+        hasAccessibility
+    }
 }

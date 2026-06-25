@@ -12,6 +12,9 @@ struct SettingsView: View {
                     Text("Preview timeout: \(settings.previewTimeout, specifier: "%.1f")s")
                 }
                 Toggle("Launch at login", isOn: $settings.launchAtLogin)
+                Text(LaunchAtLoginManager.isEnabled() ? "Currently registered with the system" : "Not currently registered")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
                 Picker("Preferred injection", selection: $settings.injectionMethod) {
                     Text("Accessibility (AX)").tag("ax")
                     Text("Clipboard fallback only").tag("clipboard")

@@ -8,7 +8,9 @@ struct PreviewView: View {
     var onInject: (String) -> Void
     var onDiscard: () -> Void
 
-    private let autoDismissSeconds: Double = 2.0
+    private var autoDismissSeconds: Double {
+        SettingsStore.shared.previewTimeout
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {

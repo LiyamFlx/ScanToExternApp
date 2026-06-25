@@ -5,11 +5,7 @@ import SwiftUI
 /// Positioned bottom-right of main screen.
 /// Auto-dismisses (injects) after timeout unless user interacts.
 final class PreviewWindowController: NSWindowController {
-    private var hostingController: NSHostingController<PreviewView>?
-    private var currentText: String = ""
-    private var onFinalInject: ((String) -> Void)?
-
-    convenience init() {
+    static let shared: PreviewWindowController = {
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 340, height: 160),
             styleMask: [.borderless],
@@ -24,7 +20,20 @@ final class PreviewWindowController: NSWindowController {
         window.ignoresMouseEvents = false
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
 
-        self.init(window: window)
+        let controller = PreviewWindowController(window: window)
+        return controller
+    }()
+
+    private var hostingController: NSHostingController<PreviewView>?
+    private var currentText: String = ""
+    private var onFinalInject: ((String) -> Void)?
+
+    private override init(window: NSWindow?) {
+        super.init(window: window)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
     }
 
     func showPreview(text: String, onInject: @escaping (String) -> Void, onDiscard: @escaping () -> Void) {

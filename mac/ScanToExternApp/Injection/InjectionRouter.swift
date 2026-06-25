@@ -5,13 +5,15 @@ import Foundation
 /// - Always broadcasts scans to the browser extension via WS (for web apps like Google Docs, Gmail, etc.)
 /// - For non-browser native apps: tries AXInjector first, falls back to ClipboardInjector.
 final class InjectionRouter {
+    static let shared = InjectionRouter()
+
     private let ax = AXInjector()
     private let clipboard = ClipboardInjector()
     private let bridge = WebSocketBridge()
 
     private var lastBroadcastId: String?
 
-    init() {
+    private init() {
         bridge.start()
     }
 
@@ -39,7 +41,11 @@ final class InjectionRouter {
         ]
 
         if !browserBundleIDs.contains(frontAppBundleID) {
-            if ax.inject(text) {
+            let method = SettingsStore.shared.injectionMethod
+            if method == "clipboard" {
+                clipboard.inject(text)
+                print("[Router] Forced clipboard injection (per settings) into \(frontAppBundleID)")
+            } else if ax.inject(text) {
                 print("[Router] Injected via AXUIElement into \(frontAppBundleID)")
             } else {
                 clipboard.inject(text)

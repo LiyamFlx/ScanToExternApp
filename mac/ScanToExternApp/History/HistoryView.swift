@@ -37,10 +37,26 @@ struct HistoryView: View {
                             .foregroundColor(.secondary)
                         Spacer()
                         Button("Re-inject") {
-                            // Route directly (bypass preview for re-inject)
-                            // In full app this would go through InjectionRouter
-                            print("Re-inject from history: \(record.id)")
-                            // For demo, could call a global router if exposed
+                            // Show the preview flow again for the historical text (user can edit/correct before injecting)
+                            PreviewWindowController.shared.showPreview(
+                                text: record.text,
+                                onInject: { finalText in
+                                    Task {
+                                        let processed = await AIProcessor.shared.process(finalText)
+                                        InjectionRouter.shared.route(processed)
+
+                                        // Update or append a new history entry for the re-inject
+                                        if SettingsStore.shared.historyEnabled {
+                                            var newRecord = record
+                                            newRecord.processedText = processed != finalText ? processed : nil
+                                            newRecord.timestamp = Date()
+                                            newRecord.injectedTo = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+                                            try? ScanHistoryStore.shared.save(newRecord)
+                                        }
+                                    }
+                                },
+                                onDiscard: {}
+                            )
                         }
                     }
                 }

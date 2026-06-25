@@ -12,6 +12,8 @@ struct MenuBarView: View {
 
     @State private var showingHistory = false
     @State private var showingSettings = false
+    @State private var showingOnboarding = false
+    @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -23,7 +25,7 @@ struct MenuBarView: View {
                 Text("ScanToExternApp")
                     .font(.headline)
                 Spacer()
-                Text("v5.0")
+                Text("v\(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "5.0")")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -91,6 +93,13 @@ struct MenuBarView: View {
                 }
                 .buttonStyle(.bordered)
 
+                Button {
+                    showingOnboarding = true
+                } label: {
+                    Label("Permissions", systemImage: "shield")
+                }
+                .buttonStyle(.bordered)
+
                 Spacer()
 
                 // Debug helper (remove or guard with #if DEBUG in shipping)
@@ -143,6 +152,18 @@ struct MenuBarView: View {
         }
         .sheet(isPresented: $showingSettings) {
             SettingsView()
+        }
+        .sheet(isPresented: $showingOnboarding) {
+            PermissionsOnboardingView()
+        }
+        .onAppear {
+            if !hasSeenOnboarding && !PermissionsManager.shared.allCriticalPermissionsGranted {
+                // Auto show once on first run if permissions missing
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                    showingOnboarding = true
+                    hasSeenOnboarding = true
+                }
+            }
         }
     }
 

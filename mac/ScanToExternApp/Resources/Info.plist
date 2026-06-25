@@ -36,5 +36,18 @@
 	<string>https://your-update-server.com/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>YOUR_EDDSA_PUBLIC_KEY_HERE</string>
+
+	<!-- Backwards compat URL scheme (scan2extern://) - primary injection is now direct/WS -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.topscan.ScanToExternApp</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>scan2extern</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

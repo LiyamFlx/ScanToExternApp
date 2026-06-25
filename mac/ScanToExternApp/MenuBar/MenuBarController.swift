@@ -8,6 +8,7 @@ import Combine
 class MenuBarController: NSObject, ObservableObject {
     private let statusItem: NSStatusItem
     private let popover: NSPopover
+    private var cancellables = Set<AnyCancellable>()
 
     @Published var connectionState: ConnectionState = .disconnected
     @Published var lastScanPreview: String = ""
@@ -19,6 +20,24 @@ class MenuBarController: NSObject, ObservableObject {
         self.popover = popover
         super.init()
         updateStatusIcon()
+
+        // Live sync with HardwareManager
+        // (AppDelegate also sinks for some updates)
+        HardwareManager.shared.$connectionState
+            .receive(on: RunLoop.main)
+            .sink { [weak self] state in
+                self?.connectionState = state
+                self?.updateStatusIcon()
+            }
+            .store(in: &cancellables)
+
+        HardwareManager.shared.$deviceName
+            .receive(on: RunLoop.main)
+            .assign(to: &$deviceName)
+
+        HardwareManager.shared.$batteryPercent
+            .receive(on: RunLoop.main)
+            .assign(to: &$batteryPercent)
     }
 
     func updateStatusIcon() {
