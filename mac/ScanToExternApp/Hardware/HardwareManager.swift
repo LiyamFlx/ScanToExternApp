@@ -143,4 +143,13 @@ final class HardwareManager: ObservableObject {
             usb.start()
         }
     }
+
+    /// Debug helper: simulate an incoming scan from hardware (for testing preview/injection/history without a physical device).
+    func simulateScan(_ text: String = "The quick brown fox jumps over the lazy dog. This is a test scan from ScanToExternApp v5.0.") {
+        print("[Hardware] DEBUG: Simulating scan: \(text.prefix(40))...")
+        lastScan = text
+        activeSource = "debug"
+        connectionState = .connected
+        scanPublisher.send((text: text, source: "debug"))
+    }
 }

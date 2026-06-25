@@ -24,8 +24,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             button.action = #selector(togglePopover(_:))
             button.target = self
 
-            // Add right-click context menu (quit)
+            // Add right-click context menu (quit + debug)
             let rightClickMenu = NSMenu()
+            let debugItem = NSMenuItem(title: "Debug: Simulate Scan", action: #selector(debugSimulateScan), keyEquivalent: "")
+            debugItem.target = self
+            rightClickMenu.addItem(debugItem)
+            rightClickMenu.addItem(NSMenuItem.separator())
             rightClickMenu.addItem(withTitle: "Quit", action: #selector(quitApp), keyEquivalent: "q")
             // Note: for mixed left/right, we keep menu on statusItem and handle left separately
             statusItem.menu = rightClickMenu
@@ -116,6 +120,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func quitApp() {
         NSApp.terminate(nil)
+    }
+
+    @objc private func debugSimulateScan() {
+        HardwareManager.shared.simulateScan()
     }
 
     func applicationWillTerminate(_ aNotification: Notification) {

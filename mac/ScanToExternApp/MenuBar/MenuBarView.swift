@@ -8,7 +8,7 @@ struct MenuBarView: View {
     @State private var lastScanned: String = "No scans yet. Scan with your pen to start."
     @State private var deviceInfo: String = "No device connected"
     @State private var battery: Int? = nil
-    @State private var aiEnabled: Bool = true
+    @State private var aiEnabled: Bool = SettingsStore.shared.aiMode != "off"
 
     @State private var showingHistory = false
     @State private var showingSettings = false
@@ -93,9 +93,19 @@ struct MenuBarView: View {
 
                 Spacer()
 
+                // Debug helper (remove or guard with #if DEBUG in shipping)
+                Button("Test Scan") {
+                    HardwareManager.shared.simulateScan()
+                }
+                .buttonStyle(.bordered)
+                .font(.caption)
+
                 Toggle("AI", isOn: $aiEnabled)
                     .toggleStyle(.switch)
                     .font(.caption)
+                    .onChange(of: aiEnabled) { enabled in
+                        SettingsStore.shared.aiMode = enabled ? "correct" : "off"
+                    }
             }
 
             Divider()
