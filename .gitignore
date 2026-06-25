@@ -13,3 +13,8 @@ dist/
 *.msi
 *.exe
 *.pkg
+.build/
+.swiftpm/
+Package.resolved  # optional; can be committed if you want reproducible builds across team
+mac/.build/
+mac/Package.resolved
