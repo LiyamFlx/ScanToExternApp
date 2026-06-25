@@ -41,8 +41,10 @@ swift build
 
 ### 3. After build in Xcode
 - Grant Accessibility permission when prompted (for text injection).
-- Plug in Scanmarker via USB or pair via Bluetooth.
-- Scan text — the hardware layer will receive it (you can observe in console).
+- **Easiest testing (no hardware needed):** Right-click the menubar icon → "Debug: Simulate Scan", or click the "Test Scan" button in the popover.
+  - This exercises the *full pipeline*: floating preview toast → optional Vision correction → AI processing (per Settings) → AXUIElement or clipboard fallback → history save.
+- Real hardware: Plug Scanmarker USB or pair Bluetooth. The hardware layer receives UTF-8 text chunks (observe in Console).
+- Preview toast: bottom-right, editable, auto-injects (or click Inject/Discard). Works for native apps + (via extension) web apps.
 
 ## Project Layout
 See CLAUDE.md "Project Structure" section.
