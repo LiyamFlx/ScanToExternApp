@@ -32,21 +32,11 @@ use injection::websocket_bridge::Clients;
 
 // ── Shared application state ──────────────────────────────────────────────────
 
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(Debug, Clone, Default, serde::Serialize)]
 pub struct ConnectionStatus {
     pub connected: bool,
     pub device_name: String,
     pub source: String, // "bluetooth" | "usb" | ""
-}
-
-impl Default for ConnectionStatus {
-    fn default() -> Self {
-        Self {
-            connected: false,
-            device_name: String::new(),
-            source: String::new(),
-        }
-    }
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -118,6 +108,14 @@ fn save_settings(new_settings: AppSettings, state: tauri::State<Arc<AppState>>) 
 fn inject_text(text: String, state: tauri::State<Arc<AppState>>) {
     let method = state.settings.read().unwrap().injection_method.clone();
     injection::router::route_text(&text, &method, &state.ws_clients);
+}
+
+#[tauri::command]
+fn open_window(label: String, app: AppHandle) {
+    if let Some(w) = app.get_webview_window(&label) {
+        let _ = w.show();
+        let _ = w.set_focus();
+    }
 }
 
 #[tauri::command]
@@ -412,6 +410,7 @@ fn main() {
             get_settings,
             save_settings,
             inject_text,
+            open_window,
             simulate_scan,
             get_history,
             search_history,

@@ -172,8 +172,8 @@
       await invoke('simulate_scan');
     }
 
-    function openHistory()  { invoke('plugin:window|show', { label: 'history'  }).catch(() => {}); }
-    function openSettings() { invoke('plugin:window|show', { label: 'settings' }).catch(() => {}); }
+    function openHistory()  { invoke('open_window', { label: 'history'  }).catch(() => {}); }
+    function openSettings() { invoke('open_window', { label: 'settings' }).catch(() => {}); }
 
     // Listen for incoming scans
     event.listen('last-scan', (e) => {

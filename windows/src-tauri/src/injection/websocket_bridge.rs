@@ -130,3 +130,49 @@ pub fn broadcast(clients: &Clients, text: &str, id: &str) {
 
     log::debug!("[WS] Broadcast to {} clients", clients_guard.len());
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn broadcast_sends_well_formed_scan_json() {
+        let clients: Clients = Arc::new(Mutex::new(vec![]));
+        let (tx, mut rx) = unbounded_channel::<Message>();
+        clients.lock().unwrap().push(tx);
+
+        broadcast(&clients, "hello", "id-123");
+
+        let msg = rx.try_recv().expect("client should receive a message");
+        let text = match msg {
+            Message::Text(t) => t,
+            other => panic!("expected text frame, got {:?}", other),
+        };
+        let json: serde_json::Value = serde_json::from_str(&text).unwrap();
+        assert_eq!(json["type"], "scan");
+        assert_eq!(json["text"], "hello");
+        assert_eq!(json["id"], "id-123");
+    }
+
+    #[test]
+    fn broadcast_drops_disconnected_clients() {
+        let clients: Clients = Arc::new(Mutex::new(vec![]));
+        let (tx, rx) = unbounded_channel::<Message>();
+        clients.lock().unwrap().push(tx);
+        drop(rx); // simulate a disconnected client
+
+        broadcast(&clients, "x", "1");
+        assert_eq!(clients.lock().unwrap().len(), 0, "dead client should be pruned");
+    }
+
+    #[test]
+    fn broadcast_rejects_oversized_text() {
+        let clients: Clients = Arc::new(Mutex::new(vec![]));
+        let (tx, mut rx) = unbounded_channel::<Message>();
+        clients.lock().unwrap().push(tx);
+
+        let huge = "a".repeat(100_001);
+        broadcast(&clients, &huge, "1");
+        assert!(rx.try_recv().is_err(), "oversized scan must not be broadcast");
+    }
+}

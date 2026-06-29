@@ -47,6 +47,10 @@ self-test mode so it injects directly.) Unset the variable / restart normally fo
 | SQLite scan history (`%LOCALAPPDATA%\ScanToExternApp\history.sqlite`) | ✅ initializes |
 | Bluetooth stack (btleplug) scanning & device discovery | ✅ discovers BLE devices, incl. a Nordic-UART device |
 | MSI + NSIS installers produced | ✅ |
+| NSIS installer **install → launch → uninstall** lifecycle | ✅ tested: installs per-user, Start-Menu shortcut, runs, clean uninstall |
+| Popover History/Settings buttons | ✅ fixed (now use an `open_window` command) |
+| Automated test suite (`cargo test`) | ✅ 8/8 pass (history CRUD, WS scan-message format/guards) |
+| Lints (`cargo clippy`) | ✅ clean, zero warnings |
 
 ## What still needs hardware / a human to confirm ⚠️
 

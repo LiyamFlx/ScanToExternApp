@@ -22,7 +22,7 @@ pub async fn process(
              Return only the translation, nothing else:\n\n{text}"
         ),
         "summarize" => format!("Summarize this in one sentence:\n\n{text}"),
-        "custom" => format!("{text}"), // caller should embed the custom instruction
+        "custom" => text.to_string(), // caller should embed the custom instruction
         _ => return Ok(text.to_string()),
     };
 
