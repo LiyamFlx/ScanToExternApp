@@ -3,9 +3,12 @@
 ///
 /// Strategy:
 ///   1. Get the currently focused UI element via UIAutomation
-///   2. Try ValuePattern (most input controls: Notepad, Word, Outlook fields)
-///   3. Try TextPattern for rich-text controls (Word document body, WordPad)
-///   4. Return false → caller falls back to clipboard injector
+///   2. Try ValuePattern (most input controls: Notepad, Outlook fields, search boxes)
+///   3. Return false → caller falls back to clipboard injector (Ctrl+V), which
+///      handles rich-text controls (Word/WordPad document body) reliably.
+///
+/// Note: UI Automation's TextPattern is read-only (no insert API in the spec), so
+/// rich-text bodies are handled by the clipboard fallback rather than UIA directly.
 #[cfg(windows)]
 pub fn inject(text: &str) -> bool {
     use uiautomation::UIAutomation;
@@ -40,23 +43,9 @@ pub fn inject(text: &str) -> bool {
         }
     }
 
-    // Strategy 2: TextPattern — rich text controls (Word body, RichTextBox)
-    if let Ok(pattern) = focused.get_pattern::<uiautomation::patterns::UITextPattern>() {
-        if let Ok(ranges) = pattern.get_selection() {
-            if let Some(range) = ranges.first() {
-                match range.insert_text(text) {
-                    Ok(_) => {
-                        log::debug!("[UIA] TextPattern.insert_text succeeded");
-                        return true;
-                    }
-                    Err(e) => {
-                        log::debug!("[UIA] TextPattern.insert_text failed: {}", e);
-                    }
-                }
-            }
-        }
-    }
-
+    // No ValuePattern (e.g. Word document body, which is a read-only TextPattern
+    // control under UIA): signal failure so the router uses the clipboard injector.
+    log::debug!("[UIA] focused element has no settable ValuePattern; deferring to clipboard");
     false
 }
 
