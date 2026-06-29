@@ -1,33 +1,27 @@
-/// Windows Credential Manager storage for the Claude API key.
-/// Equivalent of Mac Keychain (SecItemAdd / SecItemCopyMatching).
-/// Uses the windows-credentials crate which wraps CredWrite/CredRead.
-const TARGET: &str = "ScanToExternApp/ClaudeAPIKey";
+/// Secure credential storage for the Claude API key.
+/// Uses the `keyring` crate which wraps:
+///   - Windows Credential Manager on Windows
+///   - macOS Keychain on macOS
+///   - libsecret / kwallet on Linux
+use keyring::Entry;
 
-#[cfg(windows)]
+const SERVICE: &str = "com.topscan.ScanToExternApp";
+const ACCOUNT: &str = "ClaudeAPIKey";
+
 pub fn save_api_key(key: &str) -> anyhow::Result<()> {
-    use windows_credentials::Credential;
-    Credential::new(TARGET, "claudeAPIKey", key.as_bytes()).save()?;
+    let entry = Entry::new(SERVICE, ACCOUNT)?;
+    entry.set_password(key)?;
     Ok(())
 }
 
-#[cfg(windows)]
 pub fn load_api_key() -> anyhow::Result<String> {
-    use windows_credentials::Credential;
-    let cred = Credential::load(TARGET)?;
-    Ok(String::from_utf8(cred.credential_blob)?)
+    let entry = Entry::new(SERVICE, ACCOUNT)?;
+    Ok(entry.get_password()?)
 }
 
-#[cfg(windows)]
+#[allow(dead_code)]
 pub fn delete_api_key() -> anyhow::Result<()> {
-    use windows_credentials::Credential;
-    Credential::delete(TARGET)?;
+    let entry = Entry::new(SERVICE, ACCOUNT)?;
+    entry.delete_credential()?;
     Ok(())
 }
-
-// Stubs for non-Windows builds
-#[cfg(not(windows))]
-pub fn save_api_key(_key: &str) -> anyhow::Result<()> { Ok(()) }
-#[cfg(not(windows))]
-pub fn load_api_key() -> anyhow::Result<String> { Ok(String::new()) }
-#[cfg(not(windows))]
-pub fn delete_api_key() -> anyhow::Result<()> { Ok(()) }

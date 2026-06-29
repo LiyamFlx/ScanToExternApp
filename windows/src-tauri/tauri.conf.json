@@ -4,9 +4,6 @@
   "version": "5.0.0",
   "identifier": "com.topscan.ScanToExternApp",
   "build": {
-    "beforeDevCommand": "",
-    "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "",
     "frontendDist": "../src"
   },
   "app": {
@@ -78,20 +75,12 @@
     "publisher": "Topscan Ltd.",
     "copyright": "© 2025 Topscan Ltd.",
     "resources": [],
-    "nsis": {
-      "displayLanguageSelector": false,
-      "languages": ["English"],
-      "installMode": "currentUser"
-    }
-  },
-  "updater": {
-    "pubkey": "YOUR_TAURI_UPDATER_PUBKEY_HERE",
-    "endpoints": [
-      "https://your-update-server.com/windows/{{target}}/{{arch}}/{{current_version}}"
-    ],
-    "dialog": true,
     "windows": {
-      "installMode": "quiet"
+      "nsis": {
+        "displayLanguageSelector": false,
+        "languages": ["English"],
+        "installMode": "currentUser"
+      }
     }
   }
 }

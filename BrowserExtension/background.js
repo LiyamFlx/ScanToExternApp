@@ -57,3 +57,21 @@ setInterval(() => {
     socket.send(JSON.stringify({ type: 'ping' }));
   }
 }, 25000);
+
+// MV3 reliability: the service worker is terminated after ~30s idle, which would drop the
+// WebSocket and stop scans from arriving. chrome.alarms wakes the worker on a schedule; each
+// wake re-establishes the socket if it was lost. This keeps the bridge alive long-term.
+chrome.alarms.create('ws-keepalive', { periodInMinutes: 0.4 }); // ~24s
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === 'ws-keepalive') {
+    if (!socket || socket.readyState === WebSocket.CLOSED || socket.readyState === WebSocket.CLOSING) {
+      connect();
+    } else if (socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ type: 'ping' }));
+    }
+  }
+});
+
+// Reconnect promptly when the worker (re)starts or the browser wakes.
+chrome.runtime.onStartup.addListener(connect);
+chrome.runtime.onInstalled.addListener(connect);

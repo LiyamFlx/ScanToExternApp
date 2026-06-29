@@ -3,7 +3,7 @@
   "name": "ScanToExternApp",
   "version": "5.0.0",
   "description": "Injects Scanmarker pen scanner text into any web app (Google Docs, Gmail, etc). Requires the native ScanToExternApp companion.",
-  "permissions": ["activeTab", "scripting"],
+  "permissions": ["activeTab", "scripting", "alarms"],
   "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "background.js"

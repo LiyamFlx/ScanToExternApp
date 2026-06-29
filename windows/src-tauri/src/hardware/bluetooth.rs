@@ -5,9 +5,10 @@
 /// buffer incoming 20-byte BLE chunks → emit complete string after 300ms silence.
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
+use tokio::time::Instant as TokioInstant;
 
 use btleplug::api::{
-    Central, Manager as _, Peripheral as _, ScanFilter, WriteType,
+    Central, CharPropFlags, Manager as _, Peripheral as _, ScanFilter,
 };
 use btleplug::platform::{Manager, Peripheral};
 use futures_util::StreamExt;
@@ -16,9 +17,12 @@ use uuid::Uuid;
 
 use crate::ConnectionStatus;
 
-// Nordic UART Service UUIDs (same as Mac BluetoothManager.swift)
+// Nordic UART Service UUIDs (Scanmarker Air)
 const NUS_SERVICE: Uuid = uuid::uuid!("6E400001-B5A3-F393-E0A9-E50E24DCCA9E");
-const NUS_TX_CHAR: Uuid = uuid::uuid!("6E400003-B5A3-F393-E0A9-E50E24DCCA9E"); // scanner → app
+const NUS_TX_CHAR: Uuid = uuid::uuid!("6E400003-B5A3-F393-E0A9-E50E24DCCA9E");
+
+// PenScan / Scanmarker BLE5 UUIDs (discovered via characteristic sniff)
+const PENSCAN_TX_CHAR: Uuid = uuid::uuid!("7c6b5200-a002-b001-c003-0709147c6b52"); // NOTIFY
 
 pub async fn start(
     scan_tx: broadcast::Sender<(String, String)>,
@@ -97,13 +101,22 @@ async fn connect_and_listen(
     peripheral.connect().await?;
     peripheral.discover_services().await?;
 
-    // Find TX characteristic (scanner → app data)
+    // Log all discovered characteristics so we can identify unknown devices
     let chars = peripheral.characteristics();
-    let tx_char = chars
-        .iter()
+    log::info!("[BT] {} characteristics on {}:", chars.len(), device_name);
+    for c in &chars {
+        log::info!("[BT]   UUID: {}  props: {:?}", c.uuid, c.properties);
+    }
+
+    // Priority: NUS TX → PenScan TX → any NOTIFY char
+    let tx_char = chars.iter()
         .find(|c| c.uuid == NUS_TX_CHAR)
+        .or_else(|| chars.iter().find(|c| c.uuid == PENSCAN_TX_CHAR))
+        .or_else(|| chars.iter().find(|c| c.properties.contains(CharPropFlags::NOTIFY)))
         .cloned()
-        .ok_or_else(|| anyhow::anyhow!("NUS TX characteristic not found"))?;
+        .ok_or_else(|| anyhow::anyhow!("No notifiable characteristic found"))?;
+
+    log::info!("[BT] Using TX characteristic: {}", tx_char.uuid);
 
     peripheral.subscribe(&tx_char).await?;
 
@@ -117,31 +130,37 @@ async fn connect_and_listen(
     log::info!("[BT] Connected to {}, listening for scans…", device_name);
 
     let mut buffer = String::new();
-    let mut last_received = std::time::Instant::now();
-
     let mut stream = peripheral.notifications().await?;
 
-    while let Some(data) = stream.next().await {
-        let chunk = String::from_utf8_lossy(&data.value).to_string();
-        buffer.push_str(&chunk);
-        last_received = std::time::Instant::now();
+    // Proper debounce via tokio::select!
+    // Timer resets on every incoming packet; fires 300ms after the LAST packet.
+    let silence = Duration::from_millis(300);
+    let far_future = Duration::from_secs(86400);
+    let mut deadline = TokioInstant::now() + far_future;
 
-        // Debounce: emit complete scan after 300ms silence
-        let scan_tx_clone = scan_tx.clone();
-        let text_snapshot = buffer.clone();
-        tokio::spawn(async move {
-            tokio::time::sleep(Duration::from_millis(300)).await;
-            if last_received.elapsed() >= Duration::from_millis(280) {
-                let trimmed = text_snapshot.trim().to_string();
-                if !trimmed.is_empty() {
-                    let _ = scan_tx_clone.send((trimmed, "bluetooth".to_string()));
+    loop {
+        tokio::select! {
+            msg = stream.next() => {
+                match msg {
+                    Some(data) => {
+                        buffer.push_str(&String::from_utf8_lossy(&data.value));
+                        // Reset the silence timer on every new chunk
+                        deadline = TokioInstant::now() + silence;
+                    }
+                    None => break, // peripheral disconnected
                 }
             }
-        });
-
-        // Clear buffer (the spawned task already captured the snapshot)
-        if last_received.elapsed() >= Duration::from_millis(280) {
-            buffer.clear();
+            _ = tokio::time::sleep_until(deadline) => {
+                // 300ms of silence — emit the complete buffered scan
+                if !buffer.is_empty() {
+                    let trimmed = buffer.trim().to_string();
+                    log::info!("[BT] Emitting scan ({} chars)", trimmed.len());
+                    let _ = scan_tx.send((trimmed, "bluetooth".to_string()));
+                    buffer.clear();
+                }
+                // Push deadline far out until the next packet arrives
+                deadline = TokioInstant::now() + far_future;
+            }
         }
     }
 

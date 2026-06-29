@@ -8,14 +8,40 @@ final class ScanHistoryStore {
     private let dbQueue: DatabaseQueue
 
     private init() {
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let dbDir = appSupport.appendingPathComponent("ScanToExternApp", isDirectory: true)
-        try? FileManager.default.createDirectory(at: dbDir, withIntermediateDirectories: true)
+        // Build the on-disk path defensively; fall back to a temp/in-memory DB rather than
+        // crashing the whole app if Application Support is unavailable or unwritable.
+        func openOnDisk() -> DatabaseQueue? {
+            guard let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+                return nil
+            }
+            let dbDir = appSupport.appendingPathComponent("ScanToExternApp", isDirectory: true)
+            do {
+                try FileManager.default.createDirectory(at: dbDir, withIntermediateDirectories: true)
+                let dbPath = dbDir.appendingPathComponent("history.sqlite").path
+                return try DatabaseQueue(path: dbPath)
+            } catch {
+                print("[History] Failed to open on-disk DB: \(error) — falling back to in-memory")
+                return nil
+            }
+        }
 
-        let dbPath = dbDir.appendingPathComponent("history.sqlite").path
-        dbQueue = try! DatabaseQueue(path: dbPath)
+        if let disk = openOnDisk() {
+            dbQueue = disk
+        } else if let mem = try? DatabaseQueue() {
+            // In-memory queue keeps the app functional for the session even if disk fails.
+            dbQueue = mem
+        } else {
+            // Last resort: a uniquely-named temp file DB. DatabaseQueue() in-memory
+            // essentially never fails, so reaching here is extraordinarily unlikely.
+            let tmp = NSTemporaryDirectory() + "scanhistory-\(UUID().uuidString).sqlite"
+            dbQueue = (try? DatabaseQueue(path: tmp)) ?? { fatalError("Cannot open any database") }()
+        }
 
-        try! migrateIfNeeded()
+        do {
+            try migrateIfNeeded()
+        } catch {
+            print("[History] Migration failed: \(error)")
+        }
     }
 
     private func migrateIfNeeded() throws {

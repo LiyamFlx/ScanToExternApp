@@ -8,7 +8,7 @@ struct SettingsView: View {
             // General
             Form {
                 Toggle("Show preview toast", isOn: $settings.previewEnabled)
-                Slider(value: $settings.previewTimeout, in: 1...5, step: 0.5) {
+                Slider(value: $settings.previewTimeout, in: 1...15, step: 0.5) {
                     Text("Preview timeout: \(settings.previewTimeout, specifier: "%.1f")s")
                 }
                 Toggle("Launch at login", isOn: $settings.launchAtLogin)

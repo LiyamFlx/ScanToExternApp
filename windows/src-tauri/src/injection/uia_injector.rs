@@ -62,6 +62,7 @@ pub fn inject(text: &str) -> bool {
 
 /// Stub for non-Windows builds (CI on Mac, etc.)
 #[cfg(not(windows))]
+#[allow(dead_code)]
 pub fn inject(_text: &str) -> bool {
     false
 }

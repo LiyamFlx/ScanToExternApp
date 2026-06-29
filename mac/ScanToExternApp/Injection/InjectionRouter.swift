@@ -21,15 +21,14 @@ final class InjectionRouter {
         bridge.stop()
     }
 
-    func route(_ text: String) {
+    /// - Parameter target: the app that was focused when the scan arrived (captured BEFORE
+    ///   our preview window stole focus). We re-activate it so injection lands in the right place.
+    func route(_ text: String, target: NSRunningApplication? = nil) {
         let id = UUID().uuidString
         lastBroadcastId = id
 
-        // 1. Always send to browser extension (web content scripts handle Google Docs, etc.)
-        bridge.broadcastScan(text: text, id: id)
-
-        // 2. For native desktop apps, attempt direct AX injection
-        let frontAppBundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? ""
+        let frontAppBundleID = target?.bundleIdentifier
+            ?? NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? ""
 
         let browserBundleIDs: Set<String> = [
             "com.google.Chrome",
@@ -39,28 +38,54 @@ final class InjectionRouter {
             "com.brave.Browser",
             "com.operasoftware.Opera"
         ]
+        let isBrowser = browserBundleIDs.contains(frontAppBundleID)
 
-        if !browserBundleIDs.contains(frontAppBundleID) {
+        // All activation + injection happens off the main thread so we never block the UI
+        // with the activation settle delay (Thread.sleep). The actual AX/clipboard calls are
+        // thread-safe to invoke from a background queue.
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+
+            // 1. Re-activate the original target app so it (not our toast) is frontmost.
+            if let target = target, !target.isTerminated, !target.isActive {
+                target.activate(options: [])
+                Thread.sleep(forTimeInterval: 0.2) // let activation settle
+            }
+
+            // 2. Broadcast to the browser extension AFTER the target is frontmost, so the
+            //    extension's active-tab logic targets the right window.
+            self.bridge.broadcastScan(text: text, id: id)
+
+            // 3. Native injection (skipped for browsers — the extension handles the DOM).
+            if isBrowser {
+                print("[Router] Browser frontmost (\(frontAppBundleID)) — extension handles DOM injection")
+                return
+            }
+
+            let targetPID = target?.processIdentifier
             let method = SettingsStore.shared.injectionMethod
             if method == "clipboard" {
-                clipboard.inject(text)
+                self.clipboard.inject(text, targetApp: target)
                 print("[Router] Forced clipboard injection (per settings) into \(frontAppBundleID)")
-            } else if ax.inject(text) {
+            } else if self.ax.inject(text, targetPID: targetPID) {
                 print("[Router] Injected via AXUIElement into \(frontAppBundleID)")
             } else {
-                clipboard.inject(text)
+                self.clipboard.inject(text, targetApp: target)
                 print("[Router] AX failed — injected via clipboard fallback into \(frontAppBundleID)")
             }
-        } else {
-            print("[Router] Browser frontmost (\(frontAppBundleID)) — extension will handle DOM injection")
         }
-
-        // 3. Record in history is handled by caller (after preview / AI processing)
+        // Note: history is recorded by the caller after preview / AI processing.
     }
 
-    /// For manual re-inject from history etc.
+    /// For manual re-inject from history etc. Uses current frontmost app as target.
     func reInject(_ text: String) {
-        route(text)
+        route(text, target: nil)
+    }
+
+    /// Test-only: broadcast a scan to WebSocket clients without any preview/injection.
+    /// Used by the SCANAPP_WSTEST verification hook to confirm frame delivery.
+    func testBroadcast(_ text: String) {
+        bridge.broadcastScan(text: text, id: UUID().uuidString)
     }
 
     func requestAXPermissionIfNeeded() {

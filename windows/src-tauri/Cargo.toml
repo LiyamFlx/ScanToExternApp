@@ -55,10 +55,12 @@ uuid             = { version = "1", features = ["v4"] }
 # Timestamp
 chrono           = { version = "0.4", features = ["serde"] }
 
+# Secure credential storage (Windows Credential Manager on Windows, Keychain on Mac)
+keyring          = "3"
+
 # Windows-specific: UI Automation primary injector
 [target.'cfg(windows)'.dependencies]
 uiautomation     = "0.3"
-windows-credentials = "0.2"   # Windows Credential Manager for API key storage
 
 [features]
 default = ["custom-protocol"]

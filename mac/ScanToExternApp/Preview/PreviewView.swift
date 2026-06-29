@@ -4,6 +4,8 @@ struct PreviewView: View {
     @State var text: String
     @State var isEditing: Bool = false
     @State private var dismissProgress: Double = 1.0
+    @State private var autoTimer: Timer?
+    @State private var didFire: Bool = false   // guards against double-inject
 
     var onInject: (String) -> Void
     var onDiscard: () -> Void
@@ -45,7 +47,7 @@ struct PreviewView: View {
 
             HStack {
                 Button(role: .destructive) {
-                    onDiscard()
+                    fireOnce { onDiscard() }
                 } label: {
                     Text("Discard")
                 }
@@ -55,12 +57,18 @@ struct PreviewView: View {
 
                 Button {
                     isEditing.toggle()
+                    // Pause auto-dismiss while editing so we don't inject mid-edit.
+                    if isEditing {
+                        cancelTimer()
+                    } else {
+                        startAutoDismissTimer()
+                    }
                 } label: {
                     Text(isEditing ? "Done" : "Edit")
                 }
 
                 Button {
-                    onInject(text)
+                    fireOnce { onInject(text) }
                 } label: {
                     Text("Inject")
                         .fontWeight(.semibold)
@@ -77,19 +85,34 @@ struct PreviewView: View {
         .onAppear {
             startAutoDismissTimer()
         }
+        .onDisappear {
+            cancelTimer()
+        }
+    }
+
+    /// Ensures inject/discard happens at most once (button click OR timeout, never both).
+    private func fireOnce(_ action: () -> Void) {
+        guard !didFire else { return }
+        didFire = true
+        cancelTimer()
+        action()
+    }
+
+    private func cancelTimer() {
+        autoTimer?.invalidate()
+        autoTimer = nil
     }
 
     private func startAutoDismissTimer() {
+        cancelTimer()
         dismissProgress = 1.0
-        let total = autoDismissSeconds
-        Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { timer in
+        let total = max(autoDismissSeconds, 0.5)
+        autoTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { timer in
             dismissProgress -= (0.05 / total)
             if dismissProgress <= 0 {
                 timer.invalidate()
-                // Auto inject on timeout (per user setting in future; for now call onInject)
-                DispatchQueue.main.async {
-                    onInject(text)
-                }
+                // On timeout, auto-inject the (possibly edited) text — once.
+                fireOnce { onInject(text) }
             }
         }
     }

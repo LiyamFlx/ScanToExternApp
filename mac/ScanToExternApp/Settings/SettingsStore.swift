@@ -7,7 +7,7 @@ final class SettingsStore: ObservableObject {
     static let shared = SettingsStore()
 
     @AppStorage("previewEnabled")    var previewEnabled: Bool = true
-    @AppStorage("previewTimeout")    var previewTimeout: Double = 2.0
+    @AppStorage("previewTimeout")    var previewTimeout: Double = 10.0
 
     @AppStorage("aiMode")            var aiMode: String = "off"   // off | correct | translate | summarize | custom
     @AppStorage("targetLanguage")    var targetLanguage: String = "English"

@@ -23,7 +23,7 @@ use std::sync::{Arc, Mutex, RwLock};
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    AppHandle, Emitter, Listener, Manager,
+    AppHandle, Emitter, Manager,
 };
 use tokio::sync::broadcast;
 
@@ -102,8 +102,7 @@ fn get_settings(state: tauri::State<Arc<AppState>>) -> AppSettings {
 fn save_settings(new_settings: AppSettings, state: tauri::State<Arc<AppState>>) {
     let api_key = new_settings.claude_api_key.clone();
 
-    // Persist API key to Windows Credential Manager
-    #[cfg(windows)]
+    // Persist API key to secure credential store (Keychain / Credential Manager)
     if !api_key.is_empty() {
         ai::credential_store::save_api_key(&api_key).ok();
     }
@@ -185,8 +184,7 @@ fn main() {
     // Shared state initialised before Tauri builder
     let settings = Arc::new(RwLock::new({
         let mut s = AppSettings::default();
-        // Load API key from Credential Manager
-        #[cfg(windows)]
+        // Load API key from secure store (Keychain on Mac, Credential Manager on Windows)
         if let Ok(key) = ai::credential_store::load_api_key() {
             s.claude_api_key = key;
         }
@@ -288,21 +286,21 @@ fn main() {
             // ── WebSocket server (browser extension bridge) ────────────────
             let ws_clients_clone = ws_clients.clone();
             let app_handle_ws = app.handle().clone();
-            tokio::spawn(async move {
+            tauri::async_runtime::spawn(async move {
                 injection::websocket_bridge::start_server(ws_clients_clone, app_handle_ws).await;
             });
 
             // ── Hardware: Bluetooth ───────────────────────────────────────
             let scan_tx_bt = app_state.scan_tx.clone();
             let conn_bt = connection.clone();
-            tokio::spawn(async move {
+            tauri::async_runtime::spawn(async move {
                 hardware::bluetooth::start(scan_tx_bt, conn_bt).await;
             });
 
             // ── Hardware: USB serial ──────────────────────────────────────
             let scan_tx_usb = app_state.scan_tx.clone();
             let conn_usb = connection.clone();
-            tokio::spawn(async move {
+            tauri::async_runtime::spawn(async move {
                 hardware::usb_serial::start(scan_tx_usb, conn_usb).await;
             });
 
@@ -312,7 +310,7 @@ fn main() {
             let pipeline_state = app_state.clone();
             let app_handle_pipeline = app.handle().clone();
 
-            tokio::spawn(async move {
+            tauri::async_runtime::spawn(async move {
                 while let Ok((raw_text, source)) = scan_rx.recv().await {
                     log::info!("[Pipeline] Scan received ({} chars) via {}", raw_text.len(), source);
 

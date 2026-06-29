@@ -11,7 +11,7 @@ use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 
 use futures_util::{SinkExt, StreamExt};
-use tauri::{AppHandle, Emitter};
+use tauri::AppHandle;
 use tokio::net::TcpListener;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedSender};
 use tokio_tungstenite::{accept_async, tungstenite::Message};
@@ -43,7 +43,7 @@ pub async fn start_server(clients: Clients, _app: AppHandle) {
                 }
 
                 let clients = clients.clone();
-                tokio::spawn(async move {
+                tauri::async_runtime::spawn(async move {
                     handle_client(stream, clients, peer_addr).await;
                 });
             }
@@ -75,7 +75,7 @@ async fn handle_client(
     let (mut write, mut read) = ws.split();
 
     // Task: forward queued outbound messages to the WebSocket
-    let write_task = tokio::spawn(async move {
+    let write_task = tauri::async_runtime::spawn(async move {
         while let Some(msg) = rx.recv().await {
             if write.send(msg).await.is_err() {
                 break;
