@@ -61,6 +61,12 @@ keyring          = "3"
 # Windows-specific: UI Automation primary injector
 [target.'cfg(windows)'.dependencies]
 uiautomation     = "0.3"
+# Win32 foreground-window capture/restore (keep injection targeting the user's app)
+windows          = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_System_Threading",
+    "Win32_UI_WindowsAndMessaging",
+] }
 
 [features]
 default = ["custom-protocol"]

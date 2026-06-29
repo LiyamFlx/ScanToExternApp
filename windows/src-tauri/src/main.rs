@@ -181,9 +181,17 @@ fn main() {
         .filter_level(log::LevelFilter::Info)
         .init();
 
+    // Self-test mode: STEA_SELFTEST=1 fires a synthetic scan a few seconds after
+    // launch so injection can be verified without Scanmarker hardware. Preview is
+    // disabled in this mode so the scan injects directly into the focused window.
+    let selftest = std::env::var("STEA_SELFTEST").is_ok();
+
     // Shared state initialised before Tauri builder
     let settings = Arc::new(RwLock::new({
         let mut s = AppSettings::default();
+        if selftest {
+            s.preview_enabled = false;
+        }
         // Load API key from secure store (Keychain on Mac, Credential Manager on Windows)
         if let Ok(key) = ai::credential_store::load_api_key() {
             s.claude_api_key = key;
@@ -314,6 +322,10 @@ fn main() {
                 while let Ok((raw_text, source)) = scan_rx.recv().await {
                     log::info!("[Pipeline] Scan received ({} chars) via {}", raw_text.len(), source);
 
+                    // Remember the user's foreground window NOW, before the preview
+                    // toast appears and steals focus, so injection targets it later.
+                    injection::focus::capture_foreground();
+
                     let settings = pipeline_state.settings.read().unwrap().clone();
 
                     // AI processing (cloud opt-in)
@@ -378,6 +390,19 @@ fn main() {
                     let _ = app_handle_pipeline.emit("last-scan", &processed);
                 }
             });
+
+            // ── Self-test: fire a synthetic scan after a delay ────────────
+            if selftest {
+                let tx = app_state.scan_tx.clone();
+                tauri::async_runtime::spawn(async move {
+                    tokio::time::sleep(std::time::Duration::from_secs(8)).await;
+                    log::info!("[SelfTest] Firing synthetic scan — focus a text field now");
+                    let _ = tx.send((
+                        "ScanToExternApp self-test injection OK".to_string(),
+                        "selftest".to_string(),
+                    ));
+                });
+            }
 
             log::info!("[ScanToExternApp] v5.0 Windows tray app started");
             Ok(())

@@ -10,6 +10,10 @@ pub fn route_text(text: &str, method: &str, ws_clients: &Clients) {
     // 1. Always broadcast to browser extension (handles Google Docs, web mail, etc.)
     super::websocket_bridge::broadcast(ws_clients, text, &uuid::Uuid::new_v4().to_string());
 
+    // Return focus to the user's target window before native injection — our own
+    // preview/popover may currently hold focus, which would misdirect the inject.
+    super::focus::restore_foreground();
+
     // 2. Native app injection
     if method == "clipboard" {
         log::debug!("[Router] Clipboard-only mode");
