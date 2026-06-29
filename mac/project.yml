@@ -1,0 +1,50 @@
+name: ScanToExternApp
+options:
+  bundleIdPrefix: com.topscan
+  deploymentTarget:
+    macOS: "13.0"
+  createIntermediateGroups: true
+
+packages:
+  GRDB:
+    url: https://github.com/groue/GRDB.swift
+    from: 6.0.0
+  SwiftyJSON:
+    url: https://github.com/SwiftyJSON/SwiftyJSON
+    from: 5.0.0
+  ORSSerialPort:
+    url: https://github.com/armadsen/ORSSerialPort
+    from: 2.1.0
+
+targets:
+  ScanToExternApp:
+    type: application
+    platform: macOS
+    sources:
+      - path: ScanToExternApp
+        excludes:
+          - "Resources/Info.plist"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.topscan.ScanToExternApp
+        MARKETING_VERSION: "5.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+        ENABLE_HARDENED_RUNTIME: YES
+        # App Sandbox intentionally OFF — required for AXUIElement injection
+        ENABLE_APP_SANDBOX: NO
+        SWIFT_VERSION: "5.0"
+        # Unsigned local build for internal team testing
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGNING_REQUIRED: NO
+        CODE_SIGNING_ALLOWED: NO
+        # Use the hand-written Info.plist verbatim (LSUIElement, usage strings, URL scheme).
+        # Do NOT set INFOPLIST_KEY_* — those make Xcode synthesize a plist and ignore ours.
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: ScanToExternApp/Resources/Info.plist
+    dependencies:
+      - package: GRDB
+        product: GRDB
+      - package: SwiftyJSON
+        product: SwiftyJSON
+      - package: ORSSerialPort
+        product: ORSSerial

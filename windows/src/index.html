@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ScanToExternApp</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body { background: var(--bg); width: 320px; min-height: 480px; }
+
+    .header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 14px 16px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .header .logo { font-size: 20px; }
+    .header h1   { font-size: 14px; font-weight: 600; }
+    .header .version { font-size: 11px; color: var(--text-muted); margin-left: auto; }
+
+    .status-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 16px;
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+    }
+    .status-label { font-size: 12px; }
+    .device-name  { font-size: 11px; color: var(--text-muted); margin-left: auto; }
+
+    .last-scan {
+      margin: 12px 16px 0;
+      padding: 10px 12px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .last-scan .label {
+      font-size: 10px; text-transform: uppercase;
+      letter-spacing: .08em; color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    .last-scan .text {
+      font-size: 12px; line-height: 1.5;
+      max-height: 54px; overflow: hidden;
+      color: var(--text);
+    }
+
+    .actions {
+      display: flex; gap: 8px;
+      padding: 12px 16px;
+    }
+    .actions .btn { flex: 1; justify-content: center; font-size: 12px; }
+
+    .settings-row {
+      padding: 0 16px 12px;
+    }
+    .settings-row label {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+    }
+    .settings-row label:last-child { border-bottom: none; }
+
+    /* Toggle switch */
+    .toggle { position: relative; width: 32px; height: 18px; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .slider-pill {
+      position: absolute; cursor: pointer; inset: 0;
+      background: #444; border-radius: 18px; transition: .2s;
+    }
+    .slider-pill::before {
+      content: ""; position: absolute;
+      width: 14px; height: 14px; left: 2px; bottom: 2px;
+      background: #fff; border-radius: 50%; transition: .2s;
+    }
+    input:checked + .slider-pill { background: var(--accent); }
+    input:checked + .slider-pill::before { transform: translateX(14px); }
+
+    .footer {
+      padding: 10px 16px;
+      border-top: 1px solid var(--border);
+      display: flex; justify-content: space-between;
+      align-items: center;
+    }
+    .footer .ext-status { font-size: 11px; color: var(--text-muted); }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <span class="logo">🖊</span>
+    <h1>ScanToExternApp</h1>
+    <span class="version">v5.0</span>
+  </div>
+
+  <div class="status-row">
+    <span class="dot disconnected" id="statusDot"></span>
+    <span class="status-label" id="statusLabel">Disconnected</span>
+    <span class="device-name" id="deviceName"></span>
+  </div>
+
+  <div class="last-scan">
+    <div class="label">Last Scan</div>
+    <div class="text" id="lastScan">No scans yet. Try right-clicking the tray icon → Debug: Simulate Scan.</div>
+  </div>
+
+  <div class="actions">
+    <button class="btn" onclick="openHistory()">📋 History</button>
+    <button class="btn" onclick="openSettings()">⚙ Settings</button>
+    <button class="btn primary" onclick="simulateScan()">⚡ Test Scan</button>
+  </div>
+
+  <div class="settings-row">
+    <label>
+      Preview toast
+      <label class="toggle">
+        <input type="checkbox" id="previewToggle" onchange="togglePreview(this.checked)">
+        <span class="slider-pill"></span>
+      </label>
+    </label>
+    <label>
+      AI processing
+      <span class="muted" id="aiLabel">Off</span>
+    </label>
+  </div>
+
+  <div class="footer">
+    <span class="ext-status" id="extStatus">🔴 Extension not connected</span>
+    <span class="muted" style="font-size:11px" id="wsCount">0 clients</span>
+  </div>
+
+  <script>
+    const { invoke, event } = window.__TAURI__;
+
+    let settings = {};
+
+    async function init() {
+      const [status, s] = await Promise.all([
+        invoke('get_status'),
+        invoke('get_settings'),
+      ]);
+      settings = s;
+      renderStatus(status);
+      renderSettings(s);
+    }
+
+    function renderStatus(status) {
+      const dot = document.getElementById('statusDot');
+      const label = document.getElementById('statusLabel');
+      const device = document.getElementById('deviceName');
+
+      dot.className = 'dot ' + (status.connected ? 'connected' : 'disconnected');
+      label.textContent = status.connected
+        ? `Connected (${status.source})`
+        : 'Disconnected';
+      device.textContent = status.device_name;
+    }
+
+    function renderSettings(s) {
+      document.getElementById('previewToggle').checked = s.preview_enabled;
+      document.getElementById('aiLabel').textContent = {
+        'off': 'Off', 'correct': 'Auto-correct', 'translate': 'Translate',
+        'summarize': 'Summarize', 'custom': 'Custom',
+      }[s.ai_mode] || s.ai_mode;
+    }
+
+    async function togglePreview(val) {
+      settings.preview_enabled = val;
+      await invoke('save_settings', { newSettings: settings });
+    }
+
+    async function simulateScan() {
+      await invoke('simulate_scan');
+    }
+
+    function openHistory()  { invoke('plugin:window|show', { label: 'history'  }).catch(() => {}); }
+    function openSettings() { invoke('plugin:window|show', { label: 'settings' }).catch(() => {}); }
+
+    // Listen for incoming scans
+    event.listen('last-scan', (e) => {
+      const el = document.getElementById('lastScan');
+      el.textContent = e.payload.length > 120
+        ? e.payload.slice(0, 120) + '…'
+        : e.payload;
+    });
+
+    // Listen for connection state changes
+    event.listen('connection-changed', (e) => renderStatus(e.payload));
+
+    init();
+  </script>
+</body>
+</html>

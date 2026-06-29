@@ -1,0 +1,33 @@
+{
+  "originHash" : "a4285f7726c743df770999415d69d242e9db3d093824f89e8cec0bbfbc5fecad",
+  "pins" : [
+    {
+      "identity" : "grdb.swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/groue/GRDB.swift",
+      "state" : {
+        "revision" : "2cf6c756e1e5ef6901ebae16576a7e4e4b834622",
+        "version" : "6.29.3"
+      }
+    },
+    {
+      "identity" : "orsserialport",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/armadsen/ORSSerialPort",
+      "state" : {
+        "revision" : "58a8cc454304e22280f184c2d2e25ecb3d5a74c5",
+        "version" : "2.1.0"
+      }
+    },
+    {
+      "identity" : "swiftyjson",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/SwiftyJSON/SwiftyJSON",
+      "state" : {
+        "revision" : "af76cf3ef710b6ca5f8c05f3a31307d44a3c5828",
+        "version" : "5.0.2"
+      }
+    }
+  ],
+  "version" : 3
+}

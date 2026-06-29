@@ -1,0 +1,86 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "ScanToExternApp",
+  "version": "5.0.0",
+  "identifier": "com.topscan.ScanToExternApp",
+  "build": {
+    "frontendDist": "../src"
+  },
+  "app": {
+    "security": {
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws://127.0.0.1:52731 https://api.anthropic.com"
+    },
+    "windows": [
+      {
+        "label": "main",
+        "title": "ScanToExternApp",
+        "url": "index.html",
+        "width": 320,
+        "height": 480,
+        "decorations": false,
+        "alwaysOnTop": false,
+        "skipTaskbar": true,
+        "visible": false,
+        "resizable": false,
+        "shadow": true
+      },
+      {
+        "label": "preview",
+        "title": "",
+        "url": "preview.html",
+        "width": 360,
+        "height": 150,
+        "decorations": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "visible": false,
+        "resizable": false,
+        "shadow": true
+      },
+      {
+        "label": "settings",
+        "title": "ScanToExternApp — Settings",
+        "url": "settings.html",
+        "width": 500,
+        "height": 440,
+        "decorations": true,
+        "alwaysOnTop": false,
+        "skipTaskbar": false,
+        "visible": false,
+        "resizable": false
+      },
+      {
+        "label": "history",
+        "title": "ScanToExternApp — History",
+        "url": "history.html",
+        "width": 620,
+        "height": 500,
+        "decorations": true,
+        "alwaysOnTop": false,
+        "skipTaskbar": false,
+        "visible": false,
+        "resizable": true
+      }
+    ]
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["msi", "nsis"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico"
+    ],
+    "publisher": "Topscan Ltd.",
+    "copyright": "© 2025 Topscan Ltd.",
+    "resources": [],
+    "windows": {
+      "nsis": {
+        "displayLanguageSelector": false,
+        "languages": ["English"],
+        "installMode": "currentUser"
+      }
+    }
+  }
+}

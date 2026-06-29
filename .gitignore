@@ -1,0 +1,20 @@
+.DS_Store
+build/
+*.xcuserdata
+*.xcarchive
+*.xcodeproj/project.xcworkspace/
+DerivedData/
+*.log
+*.swp
+target/
+node_modules/
+dist/
+*.dmg
+*.msi
+*.exe
+*.pkg
+.build/
+.swiftpm/
+Package.resolved  # optional; can be committed if you want reproducible builds across team
+mac/.build/
+mac/Package.resolved

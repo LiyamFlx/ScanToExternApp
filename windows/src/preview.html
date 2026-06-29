@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Preview</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      background: rgba(22, 22, 34, 0.96);
+      backdrop-filter: blur(20px);
+      width: 360px; height: 150px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      display: flex; flex-direction: column; gap: 10px;
+      overflow: hidden;
+    }
+
+    .top-row {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 11px; color: var(--text-muted);
+    }
+    .top-row .icon { font-size: 14px; }
+    .timer-bar {
+      margin-left: auto;
+      height: 3px; width: 60px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .timer-bar-fill {
+      height: 100%; background: var(--accent);
+      width: 100%;
+      transition: width linear;
+    }
+
+    .scan-text {
+      font-size: 13px; line-height: 1.5;
+      flex: 1; overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      color: var(--text);
+    }
+    .scan-text.editing {
+      display: block;
+      -webkit-line-clamp: unset;
+    }
+
+    textarea.edit-field {
+      resize: none; height: 46px; font-size: 13px;
+    }
+
+    .buttons {
+      display: flex; gap: 6px;
+    }
+    .buttons .btn { flex: 1; justify-content: center; font-size: 12px; padding: 4px 8px; }
+  </style>
+</head>
+<body>
+  <div class="top-row">
+    <span class="icon">🖊</span>
+    <span>Scanned Text</span>
+    <div class="timer-bar"><div class="timer-bar-fill" id="timerFill"></div></div>
+  </div>
+
+  <div id="displayText" class="scan-text"></div>
+  <textarea id="editField" class="edit-field" style="display:none"></textarea>
+
+  <div class="buttons">
+    <button class="btn danger"  onclick="discard()">Discard</button>
+    <button class="btn"         onclick="toggleEdit()" id="editBtn">Edit</button>
+    <button class="btn primary" onclick="inject()">Inject ↵</button>
+  </div>
+
+  <script>
+    const { invoke, event } = window.__TAURI__;
+    let currentText = '';
+    let editing = false;
+    let autoTimer = null;
+    let timeoutMs = 2000;
+
+    function setText(text) {
+      currentText = text;
+      document.getElementById('displayText').textContent = text;
+      document.getElementById('editField').value = text;
+    }
+
+    function startTimer(ms) {
+      clearTimeout(autoTimer);
+      const fill = document.getElementById('timerFill');
+      fill.style.transition = 'none';
+      fill.style.width = '100%';
+      // Force reflow
+      fill.getBoundingClientRect();
+      fill.style.transition = `width ${ms}ms linear`;
+      fill.style.width = '0%';
+
+      autoTimer = setTimeout(() => {
+        if (!editing) inject();
+      }, ms);
+    }
+
+    function inject() {
+      clearTimeout(autoTimer);
+      const text = editing
+        ? document.getElementById('editField').value
+        : currentText;
+      invoke('confirm_inject', { text });
+    }
+
+    function discard() {
+      clearTimeout(autoTimer);
+      invoke('discard_preview');
+    }
+
+    function toggleEdit() {
+      editing = !editing;
+      document.getElementById('displayText').style.display = editing ? 'none' : '-webkit-box';
+      document.getElementById('editField').style.display = editing ? 'block' : 'none';
+      document.getElementById('editBtn').textContent = editing ? 'Done' : 'Edit';
+      if (editing) {
+        clearTimeout(autoTimer); // pause timer while editing
+        document.getElementById('editField').focus();
+      } else {
+        currentText = document.getElementById('editField').value;
+        document.getElementById('displayText').textContent = currentText;
+        startTimer(timeoutMs);
+      }
+    }
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey && !editing) inject();
+      if (e.key === 'Escape') discard();
+    });
+
+    // Receive preview text from Rust
+    event.listen('preview-text', (e) => {
+      setText(e.payload);
+      startTimer(timeoutMs);
+    });
+
+    // Receive timeout setting
+    event.listen('preview-timeout', (e) => {
+      timeoutMs = e.payload;
+    });
+  </script>
+</body>
+</html>

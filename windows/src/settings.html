@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Settings — ScanToExternApp</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body { padding: 20px; min-height: 440px; }
+    h2 { font-size: 16px; margin-bottom: 16px; }
+
+    .tabs { display: flex; gap: 4px; margin-bottom: 20px; }
+    .tab {
+      padding: 5px 14px; border-radius: 6px; cursor: pointer;
+      font-size: 12px; border: 1px solid var(--border);
+      background: var(--bg2); color: var(--text-muted);
+    }
+    .tab.active { background: var(--accent); border-color: transparent; color: #fff; }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+
+    .row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 0; border-bottom: 1px solid var(--border);
+    }
+    .row:last-child { border-bottom: none; }
+    .row-label { font-size: 13px; }
+    .row-desc { font-size: 11px; color: var(--text-muted); }
+
+    /* Toggle switch */
+    .toggle { position: relative; width: 32px; height: 18px; flex-shrink: 0; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .slider-pill {
+      position: absolute; cursor: pointer; inset: 0;
+      background: #444; border-radius: 18px; transition: .2s;
+    }
+    .slider-pill::before {
+      content: ""; position: absolute;
+      width: 14px; height: 14px; left: 2px; bottom: 2px;
+      background: #fff; border-radius: 50%; transition: .2s;
+    }
+    input:checked + .slider-pill { background: var(--accent); }
+    input:checked + .slider-pill::before { transform: translateX(14px); }
+
+    .save-row { margin-top: 20px; display: flex; justify-content: flex-end; gap: 8px; }
+    .note { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <h2>⚙ Settings</h2>
+
+  <div class="tabs">
+    <div class="tab active" onclick="showTab('general')">General</div>
+    <div class="tab"        onclick="showTab('ai')">AI</div>
+    <div class="tab"        onclick="showTab('history')">History</div>
+    <div class="tab"        onclick="showTab('device')">Device</div>
+  </div>
+
+  <!-- General -->
+  <div class="tab-content active" id="tab-general">
+    <div class="row">
+      <div><div class="row-label">Show preview toast</div>
+           <div class="row-desc">Confirm text before injecting</div></div>
+      <label class="toggle">
+        <input type="checkbox" id="previewEnabled">
+        <span class="slider-pill"></span>
+      </label>
+    </div>
+    <div class="row">
+      <div class="row-label">Preview timeout (seconds)</div>
+      <input type="number" id="previewTimeout" min="1" max="10" step="0.5"
+             style="width:70px;text-align:center">
+    </div>
+    <div class="row">
+      <div><div class="row-label">Launch at login</div>
+           <div class="row-desc">Start with Windows</div></div>
+      <label class="toggle">
+        <input type="checkbox" id="launchAtLogin" disabled>
+        <span class="slider-pill"></span>
+      </label>
+    </div>
+    <div class="row">
+      <div class="row-label">Injection method</div>
+      <select id="injectionMethod" style="width:160px">
+        <option value="uia">UI Automation (recommended)</option>
+        <option value="clipboard">Clipboard only (Ctrl+V)</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- AI -->
+  <div class="tab-content" id="tab-ai">
+    <div class="field">
+      <label>AI Mode</label>
+      <select id="aiMode" onchange="onAiModeChange()">
+        <option value="off">Off</option>
+        <option value="correct">Auto-correct OCR</option>
+        <option value="translate">Translate</option>
+        <option value="summarize">Summarize</option>
+        <option value="custom">Custom instruction</option>
+      </select>
+    </div>
+    <div class="field" id="langField" style="display:none">
+      <label>Target language</label>
+      <input type="text" id="targetLanguage" placeholder="e.g. Spanish">
+    </div>
+    <div class="field">
+      <label>Anthropic Claude API Key (opt-in)</label>
+      <input type="password" id="claudeApiKey" placeholder="sk-ant-…">
+      <p class="note">Stored securely in Windows Credential Manager. Required for AI modes.</p>
+    </div>
+  </div>
+
+  <!-- History -->
+  <div class="tab-content" id="tab-history">
+    <div class="row">
+      <div><div class="row-label">Enable scan history</div></div>
+      <label class="toggle">
+        <input type="checkbox" id="historyEnabled">
+        <span class="slider-pill"></span>
+      </label>
+    </div>
+    <div class="row">
+      <div class="row-label">Max records</div>
+      <input type="number" id="historyLimit" min="10" max="5000" step="50"
+             style="width:80px;text-align:center">
+    </div>
+    <div class="row">
+      <div class="row-label">Clear all history</div>
+      <button class="btn danger" onclick="clearHistory()">Clear Now</button>
+    </div>
+  </div>
+
+  <!-- Device -->
+  <div class="tab-content" id="tab-device">
+    <div class="row">
+      <div class="row-label">Connection</div>
+      <span id="connLabel" class="muted">Checking…</span>
+    </div>
+    <div class="row">
+      <div class="row-label">Device</div>
+      <span id="deviceLabel" class="muted">—</span>
+    </div>
+    <div class="row">
+      <div><div class="row-label">Prefer Bluetooth over USB</div></div>
+      <label class="toggle">
+        <input type="checkbox" id="preferBluetooth">
+        <span class="slider-pill"></span>
+      </label>
+    </div>
+  </div>
+
+  <div class="save-row">
+    <button class="btn" onclick="window.close ? window.close() : {}">Cancel</button>
+    <button class="btn primary" onclick="save()">Save</button>
+  </div>
+
+  <script>
+    const { invoke } = window.__TAURI__;
+    let settings = {};
+
+    function showTab(name) {
+      document.querySelectorAll('.tab').forEach((t, i) => {
+        const ids = ['general','ai','history','device'];
+        t.classList.toggle('active', ids[i] === name);
+      });
+      document.querySelectorAll('.tab-content').forEach(c => {
+        c.classList.toggle('active', c.id === 'tab-' + name);
+      });
+    }
+
+    function onAiModeChange() {
+      const mode = document.getElementById('aiMode').value;
+      document.getElementById('langField').style.display =
+        mode === 'translate' ? 'block' : 'none';
+    }
+
+    async function clearHistory() {
+      if (confirm('Clear all scan history?')) {
+        await invoke('clear_history');
+        alert('History cleared.');
+      }
+    }
+
+    async function save() {
+      settings.preview_enabled = document.getElementById('previewEnabled').checked;
+      settings.preview_timeout_ms = Math.round(parseFloat(document.getElementById('previewTimeout').value) * 1000);
+      settings.ai_mode = document.getElementById('aiMode').value;
+      settings.target_language = document.getElementById('targetLanguage').value || 'English';
+      settings.claude_api_key = document.getElementById('claudeApiKey').value;
+      settings.history_enabled = document.getElementById('historyEnabled').checked;
+      settings.history_limit = parseInt(document.getElementById('historyLimit').value, 10);
+      settings.prefer_bluetooth = document.getElementById('preferBluetooth').checked;
+      settings.injection_method = document.getElementById('injectionMethod').value;
+
+      await invoke('save_settings', { newSettings: settings });
+      // Close window
+      const { getCurrent } = window.__TAURI__.window;
+      getCurrent().hide();
+    }
+
+    async function init() {
+      const [s, status] = await Promise.all([
+        invoke('get_settings'),
+        invoke('get_status'),
+      ]);
+      settings = s;
+
+      document.getElementById('previewEnabled').checked = s.preview_enabled;
+      document.getElementById('previewTimeout').value = s.preview_timeout_ms / 1000;
+      document.getElementById('aiMode').value = s.ai_mode;
+      document.getElementById('targetLanguage').value = s.target_language;
+      document.getElementById('historyEnabled').checked = s.history_enabled;
+      document.getElementById('historyLimit').value = s.history_limit;
+      document.getElementById('preferBluetooth').checked = s.prefer_bluetooth;
+      document.getElementById('injectionMethod').value = s.injection_method;
+      // Don't pre-fill API key for security
+
+      document.getElementById('connLabel').textContent =
+        status.connected ? `Connected (${status.source})` : 'Disconnected';
+      document.getElementById('deviceLabel').textContent = status.device_name || '—';
+
+      onAiModeChange();
+    }
+
+    init();
+  </script>
+</body>
+</html>
