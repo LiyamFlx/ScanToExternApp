@@ -280,8 +280,10 @@ final class WebSocketBridge: NSObject {
     // MARK: - Sending (outgoing, server→client, never masked)
 
     /// Broadcast a scan to ALL connected clients (primarily the browser extension).
+    /// Outbound payload capped at 100,000 chars per the security invariant in CLAUDE.md.
     func broadcastScan(text: String, id: String = UUID().uuidString) {
-        let message: [String: Any] = ["type": "scan", "text": text, "id": id]
+        let safeText = text.count > 100_000 ? String(text.prefix(100_000)) : text
+        let message: [String: Any] = ["type": "scan", "text": safeText, "id": id]
         guard let jsonData = try? JSONSerialization.data(withJSONObject: message),
               let jsonString = String(data: jsonData, encoding: .utf8) else {
             print("[WS] Failed to serialize scan message")

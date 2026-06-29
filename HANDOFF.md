@@ -1,53 +1,107 @@
 # Project Handoff — read this first
 
-Status notes for continuing work across machines/sessions. Last updated: 2026-06-29.
+Status notes for continuing work across machines/sessions. Last updated: 2026-06-30.
 
 ## TL;DR of where things stand
 
-- **Mac app: WORKS and is verified.** Native text injection (Accessibility + clipboard)
-  passes an automated self-test. WebSocket bridge to the browser extension works.
-  A signed DMG was built (`ScanToExternApp-5.0.0.dmg`, ~2.2 MB).
-- **Windows app: written and compiles, but NEVER built into a runnable app or tested.**
-  It must be built ON a Windows machine — it cannot be built or run on macOS.
-- All fixes are committed to `master` (commit "Fix WebSocket IPv4 binding, remove
-  Sparkle, verify native injection").
+- **Mac app: WORKS and re-verified.** Native injection (Accessibility + clipboard)
+  passes the automated self-test (AX=PASS, Clipboard=PASS), the WebSocket bridge
+  delivers correctly framed scans to clients, and a clean signed DMG
+  (`mac/build/ScanToExternApp-5.0.0.dmg`, ~2.2 MB) mounts and deep-verifies.
+- Distribution: see **NOTARIZATION.md** for the exact requirements + commands to
+  turn this into a zero-warnings DMG with an Apple Developer ID.
+- **Windows app: written and compiles, but never built into a runnable app or tested.**
+  Must be built ON a Windows machine.
 
-## What was fixed this session (Mac)
+## What was done this session (2026-06-30)
 
-1. **WebSocket server bound IPv6-only** → Chrome/the extension (which use IPv4
-   127.0.0.1) hung forever and never got scans. Rewrote `mac/.../WebSocketBridge.swift`
-   as a clean RFC 6455 server with an explicit IPv4 loopback bind. Verified: a client
-   completes the handshake and receives scan messages.
-   - NOTE: the Windows WS server (`windows/src-tauri/src/injection/websocket_bridge.rs`)
-     already binds `127.0.0.1` (IPv4) correctly — it does NOT have this bug.
-2. **Removed Sparkle entirely.** Its updater crashed on launch ("updater failed to
-   start") and its framework signing broke the self-signed build. Auto-update isn't
-   needed for hand-distributed builds.
-3. **Native injection verified** via the app's built-in self-test (opens TextEdit,
-   injects, reads back) → AX=PASS, Clipboard=PASS.
-4. **Hardened the MV3 browser extension** (`BrowserExtension/background.js`) with
-   `chrome.alarms` keepalive so the service worker dying after ~30s idle no longer
-   silently drops scans.
+1. **Re-verified the build end-to-end** after the prior session.
+   - Clean Release build via xcodegen + xcodebuild: BUILD SUCCEEDED, .app = 5.7 MB.
+   - WebSocket pipeline verified live: handshake completes, 3 scan frames received
+     by a Python client, all correctly framed JSON `{"type":"scan","text":...,"id":...}`.
+   - Self-test report: AX=PASS, Clipboard=PASS in `~/Desktop/scanapp-selftest.txt`.
+
+2. **Polish + edge-case fixes**:
+   - Removed stale `SUFeedURL` / `SUPublicEDKey` Sparkle keys from Info.plist
+     (Sparkle was removed in the previous session; the keys did nothing).
+   - WebSocket `broadcastScan` now caps text at 100,000 chars (CLAUDE.md security
+     invariant).
+   - `InjectionRouter.route` early-returns on empty/whitespace text so an empty
+     simulated/URL scan can't trigger 0-byte focus theft.
+
+3. **Signing recipe upgraded** to a stable designated requirement
+   (`identifier "com.topscan.ScanToExternApp" and certificate leaf[subject.CN] = "ScanToExternApp Self-Signed"`).
+   - With a Developer ID this trick fully eliminates re-granting Accessibility
+     across rebuilds (TCC matches the requirement, not the cdhash).
+   - With THIS self-signed cert, TCC still pins to cdhash, so each rebuild + reinstall
+     still revokes the existing Accessibility grant. Acceptable for our dev loop,
+     trivially solved once notarized.
+
+4. **DMG built + signed + verified**: mounts as `/Volumes/ScanToExternApp`, the
+   app inside passes `codesign --verify --deep --strict`, deep-launches without
+   crashing.
+
+5. **NOTARIZATION.md** documents exactly what's needed to ship a zero-warnings
+   DMG: Apple Developer Program membership, Developer ID Application cert, an
+   app-specific password for notarytool, plus the full sign + notarize + staple
+   sequence.
 
 ## How to build + run the MAC app
 
 ```bash
 cd mac
-# Regenerate the Xcode project from project.yml if needed (requires `brew install xcodegen`):
-xcodegen generate
+# Regenerate the Xcode project from project.yml (requires xcodegen, brew installed):
+/opt/homebrew/bin/xcodegen generate
 # Build Release:
-xcodebuild -project ScanToExternApp.xcodeproj -scheme ScanToExternApp -configuration Release \
-  -derivedDataPath build build
+xcodebuild -project ScanToExternApp.xcodeproj -scheme ScanToExternApp \
+  -configuration Release -derivedDataPath build build
 # App is at: build/Build/Products/Release/ScanToExternApp.app
 ```
-Sign with the local self-signed cert (created once via `mac/make-signing-cert.sh`):
+
+Sign with the local self-signed cert (created once via `mac/make-signing-cert.sh`).
+Use the stable designated requirement so the Accessibility grant survives rebuilds
+once we go to a Developer ID:
+
 ```bash
+cat > /tmp/scanapp.entitlements <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>com.apple.security.cs.disable-library-validation</key><true/>
+</dict></plist>
+EOF
 codesign --force --sign "ScanToExternApp Self-Signed" --options runtime \
+  --requirements '=designated => identifier "com.topscan.ScanToExternApp" and certificate leaf[subject.CN] = "ScanToExternApp Self-Signed"' \
+  --entitlements /tmp/scanapp.entitlements \
   build/Build/Products/Release/ScanToExternApp.app
 ```
-Self-test injection (opens TextEdit, injects, writes PASS/FAIL to ~/Desktop/scanapp-selftest.txt):
+
+Self-test injection (PASS/FAIL report written to `~/Desktop/scanapp-selftest.txt`):
+
 ```bash
-SCANAPP_SELFTEST=1 build/Build/Products/Release/ScanToExternApp.app/Contents/MacOS/ScanToExternApp
+# IMPORTANT: launch via `open`, not by executing the inner Mach-O directly.
+# Direct `Contents/MacOS/...` execution bypasses LaunchServices and TCC will
+# not match the running process against the Accessibility grant, so the test
+# spuriously reports AXIsProcessTrusted: false. The `--env` flags propagate.
+open -W -n /Applications/ScanToExternApp.app \
+  --env SCANAPP_SELFTEST=1 --env SCANAPP_QUIET=1
+cat ~/Desktop/scanapp-selftest.txt
+```
+
+WebSocket verification hook: launch with `SCANAPP_WSTEST=1` (same `open --env`
+form) and the app broadcasts a `WS_TEST_SCAN_<timestamp>` every 2s — useful to
+verify the browser extension / any WS client without hardware.
+
+## Building the DMG
+
+```bash
+STAGE=/tmp/scanapp-dmg-stage
+rm -rf "$STAGE" && mkdir "$STAGE"
+cp -R mac/build/Build/Products/Release/ScanToExternApp.app "$STAGE/"
+ln -s /Applications "$STAGE/Applications"
+hdiutil create -volname "ScanToExternApp" -srcfolder "$STAGE" \
+  -ov -format UDZO mac/build/ScanToExternApp-5.0.0.dmg
+codesign --sign "ScanToExternApp Self-Signed" mac/build/ScanToExternApp-5.0.0.dmg
 ```
 
 ## How to build the WINDOWS app (MUST be done on Windows)
@@ -61,27 +115,26 @@ injection/tray/installer code only builds on Windows. On a Windows 10/11 PC:
 cargo install tauri-cli
 
 cd windows\src-tauri
-# Dev run (launches the tray app):
-cargo tauri dev
-# Production installer (.msi / .exe):
-cargo tauri build
-# Output: target\release\bundle\msi\  and  target\release\bundle\nsis\
+cargo tauri dev      # tray app, dev
+cargo tauri build    # .msi + .exe installers in target\release\bundle\
 ```
-Then test on Windows: tray icon appears, Scanmarker connects (BT/USB), scanning
-injects into Notepad/Word via UI Automation, browser extension connects, etc.
-See `windows/WINDOWS_SETUP.md` and the acceptance criteria in `CLAUDE.md` (Sprint 4).
 
-## What still needs deciding (distribution)
+See `windows/WINDOWS_SETUP.md` and Sprint 4 acceptance criteria in `CLAUDE.md`.
 
-For users to "just open it" with no warnings:
-- **Mac:** needs an Apple Developer ID cert ($99/yr) + notarization. Without it, the
-  self-signed DMG opens but each user must right-click → Open, and web-downloaded
-  copies may need `xattr -dr com.apple.quarantine <app>`.
-- **Windows:** needs a build on Windows; a code-signing cert avoids the SmartScreen
-  warning (optional but recommended for distribution).
+## Distribution
+
+Read **NOTARIZATION.md** for the path to a zero-warnings Mac DMG. TL;DR: pay
+Apple $99/yr for Developer Program membership, create a Developer ID Application
+cert, give me the cert ID + Apple ID + Team ID + an app-specific password, and
+I'll do the sign + notarize + staple sequence end-to-end.
+
+Without notarization, the current self-signed DMG works but users see a
+Gatekeeper warning the first time. Workaround: right-click → Open in Finder
+once, OR `xattr -dr com.apple.quarantine /Applications/ScanToExternApp.app`.
 
 ## Important: starting a fresh session (e.g. on Windows)
 
 A new chat does NOT remember this conversation. To get back up to speed, tell the
-assistant: **"Read HANDOFF.md and CLAUDE.md, then continue."** Everything needed is
-in the repo (this file, CLAUDE.md = full spec, git history = what changed).
+assistant: **"Read HANDOFF.md and CLAUDE.md, then continue."** Everything needed
+is in the repo (this file, CLAUDE.md = full spec, NOTARIZATION.md = distribution,
+git history = what changed).

@@ -32,10 +32,6 @@
 	<string>ScanToExternApp needs Accessibility access to inject text into other apps.</string>
 	<key>com.apple.security.automation.apple-events</key>
 	<true/>
-	<key>SUFeedURL</key>
-	<string>https://your-update-server.com/appcast.xml</string>
-	<key>SUPublicEDKey</key>
-	<string>YOUR_EDDSA_PUBLIC_KEY_HERE</string>
 
 	<!-- Backwards compat URL scheme (scan2extern://) - primary injection is now direct/WS -->
 	<key>CFBundleURLTypes</key>

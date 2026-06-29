@@ -24,6 +24,15 @@ final class InjectionRouter {
     /// - Parameter target: the app that was focused when the scan arrived (captured BEFORE
     ///   our preview window stole focus). We re-activate it so injection lands in the right place.
     func route(_ text: String, target: NSRunningApplication? = nil) {
+        // Defensive: an empty/whitespace scan would just steal focus + paste nothing.
+        // Hardware silence timers already filter this, but the path is reachable from
+        // simulateScan/URL-scheme/re-inject too.
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            print("[Router] Skipping empty scan")
+            return
+        }
+
         let id = UUID().uuidString
         lastBroadcastId = id
 
