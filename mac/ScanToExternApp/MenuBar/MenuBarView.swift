@@ -3,15 +3,14 @@ import AppKit
 
 struct MenuBarView: View {
     @EnvironmentObject var controller: MenuBarController
+    @ObservedObject private var registry = DeviceRegistry.shared
 
-    @State private var connectionStatus: String = "Disconnected"
     @State private var lastScanned: String = "No scans yet. Scan with your pen to start."
-    @State private var deviceInfo: String = "No device connected"
-    @State private var battery: Int? = nil
     @State private var aiEnabled: Bool = SettingsStore.shared.aiMode != "off"
 
     @State private var showingHistory = false
     @State private var showingSettings = false
+    @State private var showingDevices = false
     @State private var showingOnboarding = false
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
 
@@ -33,15 +32,27 @@ struct MenuBarView: View {
 
             Divider()
 
-            // Status indicator
-            HStack(spacing: 6) {
-                Circle()
-                    .fill(statusColor)
-                    .frame(width: 10, height: 10)
-                Text("Status: \(connectionStatus)")
-                    .font(.subheadline.weight(.medium))
-                Spacer()
+            // Status indicator (driven by DeviceRegistry — rich states: scanning, connecting, connected, reconnecting, failed)
+            Button {
+                showingDevices = true
+            } label: {
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(statusColor)
+                        .frame(width: 10, height: 10)
+                    Text(statusText)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(.primary)
+                    Spacer()
+                    if let b = registry.battery {
+                        Text("\(b)%").font(.caption).foregroundColor(.secondary)
+                    }
+                    Image(systemName: "chevron.right").font(.caption2).foregroundColor(.secondary)
+                }
+                .padding(.vertical, 4)
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
 
             // Last scanned preview
             VStack(alignment: .leading, spacing: 4) {
@@ -59,26 +70,17 @@ struct MenuBarView: View {
                 .frame(minHeight: 60, maxHeight: 90)
             }
 
-            // Device
-            if connectionStatus != "Disconnected" {
-                HStack {
-                    VStack(alignment: .leading) {
-                        Text(deviceInfo)
-                            .font(.caption)
-                        if let b = battery {
-                            Text("Battery: \(b)%")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    Spacer()
-                }
-            }
-
             Spacer(minLength: 16)
 
             // Controls
             HStack(spacing: 8) {
+                Button {
+                    showingDevices = true
+                } label: {
+                    Label("Devices", systemImage: "dot.radiowaves.left.and.right")
+                }
+                .buttonStyle(.bordered)
+
                 Button {
                     showingHistory = true
                 } label: {
@@ -90,13 +92,6 @@ struct MenuBarView: View {
                     showingSettings = true
                 } label: {
                     Label("Settings", systemImage: "gearshape")
-                }
-                .buttonStyle(.bordered)
-
-                Button {
-                    showingOnboarding = true
-                } label: {
-                    Label("Permissions", systemImage: "shield")
                 }
                 .buttonStyle(.bordered)
 
@@ -127,25 +122,11 @@ struct MenuBarView: View {
         }
         .padding(12)
         .frame(width: 320, height: 480)
-        .onAppear {
-            // Sync initial state from the live HardwareManager (controller is also updated by AppDelegate sinks)
-            connectionStatus = HardwareManager.shared.connectionState.rawValue
-            let dev = HardwareManager.shared.deviceName
-            if !dev.isEmpty { deviceInfo = dev }
-            battery = HardwareManager.shared.batteryPercent
-            connectionStatus = controller.connectionState.rawValue
-        }
-        .onReceive(controller.$connectionState) { state in
-            connectionStatus = state.rawValue
-        }
         .onReceive(controller.$lastScanPreview) { preview in
             if !preview.isEmpty { lastScanned = preview }
         }
-        .onReceive(controller.$deviceName) { name in
-            if !name.isEmpty { deviceInfo = name }
-        }
-        .onReceive(controller.$batteryPercent) { b in
-            battery = b
+        .sheet(isPresented: $showingDevices) {
+            DevicesView()
         }
         .sheet(isPresented: $showingHistory) {
             HistoryView()
@@ -167,11 +148,27 @@ struct MenuBarView: View {
         }
     }
 
+    // MARK: - Status label + color (derived from DeviceRegistry.status)
+
+    private var statusText: String {
+        switch registry.status {
+        case .bluetoothOff:          return "Bluetooth off — tap to fix"
+        case .bluetoothUnauthorized: return "Bluetooth permission denied"
+        case .idle:                  return "No device paired — tap to pick one"
+        case .scanning:              return "Scanning for scanners…"
+        case .connecting(let n):     return "Connecting to \(n)…"
+        case .connected(let n, _):   return "Connected: \(n)"
+        case .reconnecting(let n):   return "Reconnecting to \(n)…"
+        case .failed:                return "Error — tap for details"
+        }
+    }
+
     private var statusColor: Color {
-        switch connectionStatus {
-        case "Connected": return .green
-        case "Scanning": return .orange
-        default: return .red
+        switch registry.status {
+        case .connected: return .green
+        case .connecting, .reconnecting, .scanning: return .orange
+        case .bluetoothOff, .bluetoothUnauthorized, .failed: return .red
+        case .idle: return .gray
         }
     }
 }

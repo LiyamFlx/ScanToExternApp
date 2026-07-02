@@ -20,12 +20,14 @@
 		3F4F961743D48C9C25346E9F /* ORSSerial in Frameworks */ = {isa = PBXBuildFile; productRef = A2E8E000F7334DEAC62C6F2A /* ORSSerial */; };
 		4D8ED2CA0B68E5C0F85F3CD7 /* ClipboardInjector.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7882FADB63ADF95809A7DAC /* ClipboardInjector.swift */; };
 		4E827DFDDE1B2813914AE357 /* PreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2399C2F96890193EDA0A3CB9 /* PreviewView.swift */; };
+		52F42D5FCE11990F3447BC37 /* DeviceRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9D7506D61A20FCE3B9C0CFB /* DeviceRegistry.swift */; };
 		7BAE13D837DFFDD58DB86A68 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0179C8BEFED4137C3456A085 /* SettingsView.swift */; };
 		81C028AE0A19960F214AE61D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0998DC51DA4F026F016296E5 /* Assets.xcassets */; };
 		A754D46F824A93F74559FAB5 /* AXInjector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 193A137460CA525A17DEC0C5 /* AXInjector.swift */; };
 		A9C2479E57A169F5117D30CF /* LaunchAtLoginManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3204D7474F5F835757B6062 /* LaunchAtLoginManager.swift */; };
 		AEBDAF118B9BD8EBE979E601 /* PreviewWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14E4A4AE3DC878F49C69070B /* PreviewWindowController.swift */; };
 		B43E91134B0296569B57E9F7 /* ScanRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5604E6E2F6C360217FF482A2 /* ScanRecord.swift */; };
+		BDF7A72E7835703A1D4E67BD /* DevicesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB0A92B254ADCCF1E61D6F47 /* DevicesView.swift */; };
 		CCA8EFE7761F3FC055DC3035 /* VisionCorrector.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF41759CF7281C5DED55A585 /* VisionCorrector.swift */; };
 		D6023F793909887C583ED0EC /* KeychainManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EB48A56F895AFC9E58B5778 /* KeychainManager.swift */; };
 		D7158AB504C5A570B9001E19 /* HardwareManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76304ADAED238C4771FFE26F /* HardwareManager.swift */; };
@@ -63,11 +65,13 @@
 		B1A1A3FFB2CB4DF48C5E9691 /* ScanHistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanHistoryStore.swift; sourceTree = "<group>"; };
 		B3204D7474F5F835757B6062 /* LaunchAtLoginManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLoginManager.swift; sourceTree = "<group>"; };
 		C6D5B1C6DD847B87A7946FF7 /* ScanToExternAppApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanToExternAppApp.swift; sourceTree = "<group>"; };
+		CB0A92B254ADCCF1E61D6F47 /* DevicesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevicesView.swift; sourceTree = "<group>"; };
 		DF41759CF7281C5DED55A585 /* VisionCorrector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisionCorrector.swift; sourceTree = "<group>"; };
 		E2A851C541E987E44B4034B2 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		E7A1B3D3987396B2455ADEFA /* WebSocketBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSocketBridge.swift; sourceTree = "<group>"; };
 		E908BA7E1715DA16712D4983 /* FoundationModelProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoundationModelProcessor.swift; sourceTree = "<group>"; };
 		F7882FADB63ADF95809A7DAC /* ClipboardInjector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardInjector.swift; sourceTree = "<group>"; };
+		F9D7506D61A20FCE3B9C0CFB /* DeviceRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceRegistry.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -163,6 +167,7 @@
 		A3F23A95BAB10F8ABF61B7BB /* MenuBar */ = {
 			isa = PBXGroup;
 			children = (
+				CB0A92B254ADCCF1E61D6F47 /* DevicesView.swift */,
 				850FCD853A0936E69E2EFF12 /* MenuBarController.swift */,
 				4F2E11E86562983A6A64F63D /* MenuBarView.swift */,
 			);
@@ -216,6 +221,7 @@
 			isa = PBXGroup;
 			children = (
 				873643B7F96B948F8787BEDC /* BluetoothManager.swift */,
+				F9D7506D61A20FCE3B9C0CFB /* DeviceRegistry.swift */,
 				76304ADAED238C4771FFE26F /* HardwareManager.swift */,
 				566D852E1AF062B601D89C88 /* USBSerialManager.swift */,
 			);
@@ -304,6 +310,8 @@
 				37E85735FCED021188506FEC /* BluetoothManager.swift in Sources */,
 				D858A58FC7F1B7CCB9619AA8 /* ClaudeProcessor.swift in Sources */,
 				4D8ED2CA0B68E5C0F85F3CD7 /* ClipboardInjector.swift in Sources */,
+				52F42D5FCE11990F3447BC37 /* DeviceRegistry.swift in Sources */,
+				BDF7A72E7835703A1D4E67BD /* DevicesView.swift in Sources */,
 				39C4F3A7D56534CB7C9922B6 /* FoundationModelProcessor.swift in Sources */,
 				D7158AB504C5A570B9001E19 /* HardwareManager.swift in Sources */,
 				09C64FC15E88E6A25328962D /* HistoryView.swift in Sources */,

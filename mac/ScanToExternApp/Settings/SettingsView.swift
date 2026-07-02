@@ -53,14 +53,17 @@ struct SettingsView: View {
             .tabItem { Label("History", systemImage: "clock") }
 
             // Device
-            VStack(alignment: .leading) {
+            VStack(alignment: .leading, spacing: 10) {
                 Text("Hardware")
                     .font(.headline)
-                Text("Bluetooth preferred: \(settings.preferBluetooth ? "Yes" : "No")")
-                Button("Rescan devices") {
+                Text("Pair with your Scanmarker from the Devices panel in the menubar popover — pick a scanner from the Nearby list, or unplug/replug a USB scanner to add it.")
+                    .font(.caption).foregroundColor(.secondary)
+                Toggle("Prefer Bluetooth over USB when both connected", isOn: $settings.preferBluetooth)
+                Button("Rescan for devices") {
                     HardwareManager.shared.forceRescan()
                 }
             }
+            .padding(.top, 4)
             .tabItem { Label("Device", systemImage: "antenna.radiowaves.left.and.right") }
         }
         .frame(width: 480, height: 380)
