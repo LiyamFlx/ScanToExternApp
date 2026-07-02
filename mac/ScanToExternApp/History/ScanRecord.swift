@@ -12,14 +12,27 @@ struct ScanRecord: Codable, FetchableRecord, PersistableRecord {
 
     static let databaseTableName = "scan_records"
 
-    // For GRDB
+    /// GRDB drives column names from the Codable representation. Without this mapping the
+    /// framework would try to INSERT into columns "processedText", "injectedTo", "aiMode" —
+    /// which don't exist — so every save silently threw and `try?` swallowed the error.
+    enum CodingKeys: String, CodingKey {
+        case id
+        case text
+        case processedText = "processed_text"
+        case timestamp
+        case source
+        case injectedTo    = "injected_to"
+        case aiMode        = "ai_mode"
+    }
+
+    // For GRDB query building
     enum Columns {
-        static let id = Column("id")
-        static let text = Column("text")
-        static let processedText = Column("processed_text")
-        static let timestamp = Column("timestamp")
-        static let source = Column("source")
-        static let injectedTo = Column("injected_to")
-        static let aiMode = Column("ai_mode")
+        static let id = Column(CodingKeys.id)
+        static let text = Column(CodingKeys.text)
+        static let processedText = Column(CodingKeys.processedText)
+        static let timestamp = Column(CodingKeys.timestamp)
+        static let source = Column(CodingKeys.source)
+        static let injectedTo = Column(CodingKeys.injectedTo)
+        static let aiMode = Column(CodingKeys.aiMode)
     }
 }
