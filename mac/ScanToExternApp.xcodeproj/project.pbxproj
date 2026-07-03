@@ -7,9 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		007831C19818AD42A0B1FE1C /* WelcomeWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E8E5D0ED3BE3A5D98FEE977 /* WelcomeWindowController.swift */; };
 		09C64FC15E88E6A25328962D /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FA9DD194589EF758958EDC6 /* HistoryView.swift */; };
 		106010B800546DDFAA557A99 /* MenuBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 850FCD853A0936E69E2EFF12 /* MenuBarController.swift */; };
 		20148C9F55416FD8E7DE1EAB /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 75ABBF3AFA74C9F761ACEF97 /* GRDB */; };
+		2251F2296413C9108C43102F /* BTLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78B3132468695B9CE726B8D6 /* BTLog.swift */; };
+		26FF02DF49F34EDFAD562E4B /* ScanFlowState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A43E35AD3A89918A947A1951 /* ScanFlowState.swift */; };
 		336A112B259F72B1D809E8FD /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F2E11E86562983A6A64F63D /* MenuBarView.swift */; };
 		35EDB7447B75EF2BA47C064B /* SettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C0D255B8E4245929340D366 /* SettingsStore.swift */; };
 		37E85735FCED021188506FEC /* BluetoothManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 873643B7F96B948F8787BEDC /* BluetoothManager.swift */; };
@@ -36,6 +39,7 @@
 		E71E64DFFE52ED8AD051D83B /* USBSerialManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 566D852E1AF062B601D89C88 /* USBSerialManager.swift */; };
 		E9738B4ED9879A6E23662544 /* AIProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1A54536A22E41022FB99E2 /* AIProcessor.swift */; };
 		EA993F0A3C8E518A2D2D47B4 /* PermissionsOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 113EF2A799E99EE8D3B11195 /* PermissionsOnboardingView.swift */; };
+		EDF93F8B3DF40EE6969DBA28 /* RunOCRClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE3C7E1ECA000A005246B38B /* RunOCRClient.swift */; };
 		F44F6419F41C5FB98ABB4F6A /* PermissionsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2793BF187C560E53D868ECA3 /* PermissionsManager.swift */; };
 		FA6E7349F4CC9904A63F7A74 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2A851C541E987E44B4034B2 /* AppDelegate.swift */; };
 		FE652A3F8990ABBFF4F6C2CF /* WebSocketBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7A1B3D3987396B2455ADEFA /* WebSocketBridge.swift */; };
@@ -57,13 +61,17 @@
 		566D852E1AF062B601D89C88 /* USBSerialManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = USBSerialManager.swift; sourceTree = "<group>"; };
 		5A1A54536A22E41022FB99E2 /* AIProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIProcessor.swift; sourceTree = "<group>"; };
 		76304ADAED238C4771FFE26F /* HardwareManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HardwareManager.swift; sourceTree = "<group>"; };
+		78B3132468695B9CE726B8D6 /* BTLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BTLog.swift; sourceTree = "<group>"; };
+		7E8E5D0ED3BE3A5D98FEE977 /* WelcomeWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeWindowController.swift; sourceTree = "<group>"; };
 		850FCD853A0936E69E2EFF12 /* MenuBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarController.swift; sourceTree = "<group>"; };
 		873643B7F96B948F8787BEDC /* BluetoothManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BluetoothManager.swift; sourceTree = "<group>"; };
 		8B78814892B11DAE8742DE55 /* InjectionRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InjectionRouter.swift; sourceTree = "<group>"; };
 		9CFD57A64C6034A5860A0463 /* ClaudeProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeProcessor.swift; sourceTree = "<group>"; };
 		A14A65077C1A27659A9EF53E /* ScanToExternApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ScanToExternApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A43E35AD3A89918A947A1951 /* ScanFlowState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanFlowState.swift; sourceTree = "<group>"; };
 		B1A1A3FFB2CB4DF48C5E9691 /* ScanHistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanHistoryStore.swift; sourceTree = "<group>"; };
 		B3204D7474F5F835757B6062 /* LaunchAtLoginManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLoginManager.swift; sourceTree = "<group>"; };
+		BE3C7E1ECA000A005246B38B /* RunOCRClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunOCRClient.swift; sourceTree = "<group>"; };
 		C6D5B1C6DD847B87A7946FF7 /* ScanToExternAppApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanToExternAppApp.swift; sourceTree = "<group>"; };
 		CB0A92B254ADCCF1E61D6F47 /* DevicesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevicesView.swift; sourceTree = "<group>"; };
 		DF41759CF7281C5DED55A585 /* VisionCorrector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisionCorrector.swift; sourceTree = "<group>"; };
@@ -152,6 +160,7 @@
 			children = (
 				E2A851C541E987E44B4034B2 /* AppDelegate.swift */,
 				C6D5B1C6DD847B87A7946FF7 /* ScanToExternAppApp.swift */,
+				7E8E5D0ED3BE3A5D98FEE977 /* WelcomeWindowController.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -204,6 +213,7 @@
 		D24B13CDA19F906643AFBA40 /* OCR */ = {
 			isa = PBXGroup;
 			children = (
+				BE3C7E1ECA000A005246B38B /* RunOCRClient.swift */,
 				DF41759CF7281C5DED55A585 /* VisionCorrector.swift */,
 			);
 			path = OCR;
@@ -221,8 +231,10 @@
 			isa = PBXGroup;
 			children = (
 				873643B7F96B948F8787BEDC /* BluetoothManager.swift */,
+				78B3132468695B9CE726B8D6 /* BTLog.swift */,
 				F9D7506D61A20FCE3B9C0CFB /* DeviceRegistry.swift */,
 				76304ADAED238C4771FFE26F /* HardwareManager.swift */,
+				A43E35AD3A89918A947A1951 /* ScanFlowState.swift */,
 				566D852E1AF062B601D89C88 /* USBSerialManager.swift */,
 			);
 			path = Hardware;
@@ -307,6 +319,7 @@
 				E9738B4ED9879A6E23662544 /* AIProcessor.swift in Sources */,
 				A754D46F824A93F74559FAB5 /* AXInjector.swift in Sources */,
 				FA6E7349F4CC9904A63F7A74 /* AppDelegate.swift in Sources */,
+				2251F2296413C9108C43102F /* BTLog.swift in Sources */,
 				37E85735FCED021188506FEC /* BluetoothManager.swift in Sources */,
 				D858A58FC7F1B7CCB9619AA8 /* ClaudeProcessor.swift in Sources */,
 				4D8ED2CA0B68E5C0F85F3CD7 /* ClipboardInjector.swift in Sources */,
@@ -324,6 +337,8 @@
 				EA993F0A3C8E518A2D2D47B4 /* PermissionsOnboardingView.swift in Sources */,
 				4E827DFDDE1B2813914AE357 /* PreviewView.swift in Sources */,
 				AEBDAF118B9BD8EBE979E601 /* PreviewWindowController.swift in Sources */,
+				EDF93F8B3DF40EE6969DBA28 /* RunOCRClient.swift in Sources */,
+				26FF02DF49F34EDFAD562E4B /* ScanFlowState.swift in Sources */,
 				D91EC2845F1DC1106930BF08 /* ScanHistoryStore.swift in Sources */,
 				B43E91134B0296569B57E9F7 /* ScanRecord.swift in Sources */,
 				3F08034FEA2B61CC37D0B5ED /* ScanToExternAppApp.swift in Sources */,
@@ -332,6 +347,7 @@
 				E71E64DFFE52ED8AD051D83B /* USBSerialManager.swift in Sources */,
 				CCA8EFE7761F3FC055DC3035 /* VisionCorrector.swift in Sources */,
 				FE652A3F8990ABBFF4F6C2CF /* WebSocketBridge.swift in Sources */,
+				007831C19818AD42A0B1FE1C /* WelcomeWindowController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

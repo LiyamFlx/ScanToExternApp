@@ -135,6 +135,8 @@ final class HardwareManager: ObservableObject {
     private func handleNewScan(_ text: String, source: String) {
         lastScan = text
         activeSource = source
+        // Live progress into the popover: text is fully reassembled at this point.
+        ScanFlowState.shared.captured(text)
         scanPublisher.send((text: text, source: source))
         print("[Hardware] New scan from \(source): \(text.prefix(60))...")
     }

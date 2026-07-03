@@ -36,8 +36,9 @@ final class InjectionRouter {
         let id = UUID().uuidString
         lastBroadcastId = id
 
-        let frontAppBundleID = target?.bundleIdentifier
-            ?? NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? ""
+        let frontApp = target ?? NSWorkspace.shared.frontmostApplication
+        let frontAppBundleID = frontApp?.bundleIdentifier ?? ""
+        let targetLabel = frontApp?.localizedName ?? frontAppBundleID.components(separatedBy: ".").last ?? "focused app"
 
         let browserBundleIDs: Set<String> = [
             "com.google.Chrome",
@@ -48,6 +49,9 @@ final class InjectionRouter {
             "com.operasoftware.Opera"
         ]
         let isBrowser = browserBundleIDs.contains(frontAppBundleID)
+
+        // Announce that we're about to inject — the popover's "Step 3" section binds to this.
+        ScanFlowState.shared.injecting(into: isBrowser ? "\(targetLabel) (browser)" : targetLabel)
 
         // All activation + injection happens off the main thread so we never block the UI
         // with the activation settle delay (Thread.sleep). The actual AX/clipboard calls are
@@ -68,6 +72,7 @@ final class InjectionRouter {
             // 3. Native injection (skipped for browsers — the extension handles the DOM).
             if isBrowser {
                 print("[Router] Browser frontmost (\(frontAppBundleID)) — extension handles DOM injection")
+                ScanFlowState.shared.injected(text.count, into: "\(targetLabel) (via browser extension)")
                 return
             }
 
@@ -76,11 +81,14 @@ final class InjectionRouter {
             if method == "clipboard" {
                 self.clipboard.inject(text, targetApp: target)
                 print("[Router] Forced clipboard injection (per settings) into \(frontAppBundleID)")
+                ScanFlowState.shared.injected(text.count, into: "\(targetLabel) (clipboard)")
             } else if self.ax.inject(text, targetPID: targetPID) {
                 print("[Router] Injected via AXUIElement into \(frontAppBundleID)")
+                ScanFlowState.shared.injected(text.count, into: targetLabel)
             } else {
                 self.clipboard.inject(text, targetApp: target)
                 print("[Router] AX failed — injected via clipboard fallback into \(frontAppBundleID)")
+                ScanFlowState.shared.injected(text.count, into: "\(targetLabel) (clipboard fallback)")
             }
         }
         // Note: history is recorded by the caller after preview / AI processing.

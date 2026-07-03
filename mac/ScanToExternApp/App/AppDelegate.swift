@@ -18,6 +18,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         // LSUIElement = true in Info.plist hides from Dock and Cmd+Tab
 
+        // Fresh BT log per session — ~/Library/Logs/ScanToExternApp/bluetooth.log
+        BTLog.reset()
+
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
 
         if let button = statusItem.button {
@@ -128,6 +131,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         LaunchAtLoginManager.syncWithSetting()
 
         print("[ScanToExternApp] v5.0 menubar app launched. Bundle ID: com.topscan.ScanToExternApp")
+
+        // Show a real, visible welcome window unless the user has ticked the "don't show" box.
+        // Reason: a pure LSUIElement app is invisible after double-click — no Dock icon,
+        // no window, only a small icon in the menubar that many users literally can't find.
+        // Explicit visible feedback that "the app is running" > confused user thinking it's broken.
+        let isTestRun = ProcessInfo.processInfo.environment["SCANAPP_SELFTEST"] == "1" ||
+                        ProcessInfo.processInfo.environment["SCANAPP_PIPELINE_TEST"] == "1" ||
+                        ProcessInfo.processInfo.environment["SCANAPP_WSTEST"] == "1"
+        let hideWelcome = UserDefaults.standard.bool(forKey: "hideWelcomeOnLaunch")
+        if !isTestRun && !hideWelcome {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                WelcomeWindowController.show { self?.togglePopover(nil) }
+            }
+        }
 
         // Verification hook: when SCANAPP_SELFTEST=1, run the end-to-end injection
         // self-test automatically on launch, then quit. Used for headless verification.
