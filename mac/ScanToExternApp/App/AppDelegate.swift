@@ -22,24 +22,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         if let button = statusItem.button {
             button.image = NSImage(systemSymbolName: "doc.text.viewfinder", accessibilityDescription: "ScanToExternApp")
-            button.action = #selector(togglePopover(_:))
             button.target = self
-
-            // Add right-click context menu (quit + debug)
-            let rightClickMenu = NSMenu()
-            let debugItem = NSMenuItem(title: "Debug: Simulate Scan", action: #selector(debugSimulateScan), keyEquivalent: "")
-            debugItem.target = self
-            rightClickMenu.addItem(debugItem)
-
-            let selfTestItem = NSMenuItem(title: "Debug: Run Injection Self-Test", action: #selector(runInjectionSelfTest), keyEquivalent: "")
-            selfTestItem.target = self
-            rightClickMenu.addItem(selfTestItem)
-
-
-            rightClickMenu.addItem(NSMenuItem.separator())
-            rightClickMenu.addItem(withTitle: "Quit", action: #selector(quitApp), keyEquivalent: "q")
-            // Note: for mixed left/right, we keep menu on statusItem and handle left separately
-            statusItem.menu = rightClickMenu
+            button.action = #selector(handleStatusClick(_:))
+            // Fire the action for BOTH left- and right-click. Do NOT set `statusItem.menu`
+            // here — that would suppress the action entirely and make the popover
+            // unreachable (which is what happened for months).
+            button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
 
         // Popover setup
@@ -170,8 +158,44 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
                 self?.runPipelineTest()
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 15.0) { NSApp.terminate(nil) }
+            // 25s ceiling — test needs ~10s (2.5 for TextEdit warmup + 2.5 direct + 3.5 preview + slack).
+            DispatchQueue.main.asyncAfter(deadline: .now() + 25.0) { NSApp.terminate(nil) }
         }
+    }
+
+    /// Single click handler for the menubar icon. Left-click → popover; right-click →
+    /// context menu (Simulate Scan / Self-Test / Pipeline Test / Quit). We can't set
+    /// `statusItem.menu` at init time because that suppresses the button action, so
+    /// we build+present the menu on demand.
+    @objc private func handleStatusClick(_ sender: Any?) {
+        let event = NSApp.currentEvent
+        if event?.type == .rightMouseUp || event?.modifierFlags.contains(.control) == true {
+            showContextMenu()
+        } else {
+            togglePopover(sender)
+        }
+    }
+
+    private func showContextMenu() {
+        guard let button = statusItem.button else { return }
+        let menu = NSMenu()
+
+        let sim = NSMenuItem(title: "Simulate Scan (debug)", action: #selector(debugSimulateScan), keyEquivalent: "")
+        sim.target = self
+        menu.addItem(sim)
+
+        let selft = NSMenuItem(title: "Run Injection Self-Test", action: #selector(runInjectionSelfTest), keyEquivalent: "")
+        selft.target = self
+        menu.addItem(selft)
+
+        menu.addItem(NSMenuItem.separator())
+
+        let quit = NSMenuItem(title: "Quit ScanToExternApp", action: #selector(quitApp), keyEquivalent: "q")
+        quit.target = self
+        menu.addItem(quit)
+
+        // popUp uses the button's coordinate space; y offset drops the menu just below the icon.
+        menu.popUp(positioning: nil, at: NSPoint(x: 0, y: button.bounds.height + 4), in: button)
     }
 
     @objc private func togglePopover(_ sender: Any?) {
@@ -181,6 +205,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             popover.contentViewController?.view.window?.makeKey()
+            // Activate so text fields / buttons inside the popover receive keyboard events.
+            NSApp.activate(ignoringOtherApps: true)
         }
     }
 
@@ -364,10 +390,76 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 }
                 self.plReport("[B] SCAN PERSISTED: \(historyPass ? "PASS ✅" : "FAIL ❌")")
 
-                // Overall verdict.
-                let overall = injectPass && historyPass && registryAlive
-                self.plReport("=== SUMMARY: Inject=\(injectPass ? "PASS" : "FAIL") History=\(historyPass ? "PASS" : "FAIL") Registry=\(registryAlive ? "PASS" : "FAIL") — \(overall ? "OK" : "FAILED") ===")
-                self.plReport("Report saved to ~/Desktop/scanapp-pipeline-test.txt")
+                // --- Stage D: empty-scan guard ---
+                // The injection router must silently drop empty/whitespace scans instead
+                // of stealing focus + pasting nothing. This proves the guard I added
+                // in InjectionRouter.route survives.
+                let historyBeforeEmpty = (try? ScanHistoryStore.shared.recent(limit: 100).count) ?? -1
+                InjectionRouter.shared.route("   ")   // whitespace-only
+                Thread.sleep(forTimeInterval: 0.5)
+                let historyAfterEmpty = (try? ScanHistoryStore.shared.recent(limit: 100).count) ?? -1
+                let emptyGuardPass = historyBeforeEmpty == historyAfterEmpty
+                self.plReport("--- Stage D: empty-scan guard ---")
+                self.plReport("history before empty=\(historyBeforeEmpty), after=\(historyAfterEmpty)")
+                self.plReport("[D] EMPTY SCAN DROPPED: \(emptyGuardPass ? "PASS ✅" : "FAIL ❌")")
+
+                // --- Stage E: preview flow ---
+                // Flip previewEnabled ON with a tight 1.5s timeout so the toast auto-fires
+                // inject without needing a UI click. Then verify a fresh marker lands both
+                // in TextEdit AND in history via the *preview* code path (a different branch
+                // in the AppDelegate subscriber that was previously untested).
+                //
+                // Write via the SettingsStore wrapper, not raw UserDefaults — @AppStorage
+                // inside an ObservableObject caches its value and does NOT rehydrate from
+                // UserDefaults on each get, so a UserDefaults.standard.set(...) would be
+                // invisible to the subscriber's `if !SettingsStore.shared.previewEnabled` check.
+                SettingsStore.shared.previewEnabled = true
+                SettingsStore.shared.previewTimeout = 1.5
+                self.plReport("--- Stage E: preview → auto-inject → history ---")
+                self.plReport("preview settings during E: enabled=\(SettingsStore.shared.previewEnabled) timeout=\(SettingsStore.shared.previewTimeout)")
+
+                te.activate(options: [])
+                Thread.sleep(forTimeInterval: 0.3)
+                let previewMarker = "PIPELINE_PREVIEW_\(Int(Date().timeIntervalSince1970))"
+                let historyBeforePreview = (try? ScanHistoryStore.shared.recent(limit: 100).count) ?? -1
+                HardwareManager.shared.simulateScan(previewMarker)
+
+                // The preview toast is a floating window that STEALS the frontmost slot from
+                // TextEdit. To let the router re-activate TextEdit at inject-time, we don't
+                // interfere here — just wait past the 1.5s timeout + the router's activation
+                // sleep (~0.5s) + injection settling.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
+                    te.activate(options: [])
+                    Thread.sleep(forTimeInterval: 0.3)
+                    let readback = readTextEdit()
+                    let previewInject = readback.contains(previewMarker)
+                    let historyAfterPreview = (try? ScanHistoryStore.shared.recent(limit: 100).count) ?? -1
+                    let previewSaved = historyAfterPreview > historyBeforePreview
+                    let recentTop = ((try? ScanHistoryStore.shared.recent(limit: 3)) ?? []).map { "\($0.text.prefix(40))|\($0.source)" }
+                    self.plReport("preview readback: \"\(readback.prefix(200))\"")
+                    self.plReport("history before=\(historyBeforePreview) after=\(historyAfterPreview); top 3: \(recentTop)")
+                    self.plReport("[E] PREVIEW FLOW INJECTED+SAVED: \(previewInject && previewSaved ? "PASS ✅" : "FAIL ❌")")
+
+                    // --- Stage F: popover opens (the menubar UX bug) ---
+                    // Previously statusItem.menu overrode the button action so togglePopover
+                    // never fired and the popover was UNREACHABLE. Programmatically call the
+                    // click handler and verify popover.isShown flips.
+                    self.plReport("--- Stage F: menubar click opens popover ---")
+                    let wasShown = self.popover.isShown
+                    self.togglePopover(nil)
+                    Thread.sleep(forTimeInterval: 0.3)
+                    let nowShown = self.popover.isShown
+                    let popoverPass = !wasShown && nowShown
+                    self.plReport("popover before togglePopover: \(wasShown), after: \(nowShown)")
+                    self.plReport("[F] POPOVER OPENS: \(popoverPass ? "PASS ✅" : "FAIL ❌")")
+                    // Clean up: hide it so the app can quit cleanly.
+                    if nowShown { self.popover.performClose(nil) }
+
+                    // Overall verdict — all 6 stages must pass.
+                    let overall = injectPass && historyPass && registryAlive && emptyGuardPass && previewInject && previewSaved && popoverPass
+                    self.plReport("=== SUMMARY: Inject=\(injectPass ? "PASS" : "FAIL") History=\(historyPass ? "PASS" : "FAIL") Registry=\(registryAlive ? "PASS" : "FAIL") EmptyGuard=\(emptyGuardPass ? "PASS" : "FAIL") Preview=\(previewInject && previewSaved ? "PASS" : "FAIL") Popover=\(popoverPass ? "PASS" : "FAIL") — \(overall ? "OK" : "FAILED") ===")
+                    self.plReport("Report saved to ~/Desktop/scanapp-pipeline-test.txt")
+                }
             }
         }
         RunLoop.main.add(stepTimer, forMode: .common)

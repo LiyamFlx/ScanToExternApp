@@ -4,6 +4,7 @@ import SwiftUI
 /// Appears as a sheet from the menubar popover or on launch if needed.
 struct PermissionsOnboardingView: View {
     @ObservedObject var permissions = PermissionsManager.shared
+    @Environment(\.dismiss) private var dismiss
     @State private var showExtensionHelp = false
 
     var body: some View {
@@ -51,10 +52,9 @@ struct PermissionsOnboardingView: View {
 
             HStack {
                 Spacer()
-                Button("Done") {
-                    // Dismiss handled by parent sheet
-                }
-                .buttonStyle(.borderedProminent)
+                Button("Done") { dismiss() }
+                    .buttonStyle(.borderedProminent)
+                    .keyboardShortcut(.defaultAction)
             }
         }
         .padding()

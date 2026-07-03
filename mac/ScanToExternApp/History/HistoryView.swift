@@ -11,7 +11,11 @@ struct HistoryView: View {
                     .font(.title2)
                 Spacer()
                 Button("Clear All") {
-                    try? ScanHistoryStore.shared.deleteAll()
+                    do {
+                        try ScanHistoryStore.shared.deleteAll()
+                    } catch {
+                        print("[History] Clear All failed: \(error)")
+                    }
                     load()
                 }
                 .foregroundColor(.red)
@@ -47,11 +51,20 @@ struct HistoryView: View {
 
                                         // Update or append a new history entry for the re-inject
                                         if SettingsStore.shared.historyEnabled {
-                                            var newRecord = record
-                                            newRecord.processedText = processed != finalText ? processed : nil
-                                            newRecord.timestamp = Date()
-                                            newRecord.injectedTo = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
-                                            try? ScanHistoryStore.shared.save(newRecord)
+                                            // Re-injects create a NEW row (new id + timestamp)
+                                            // rather than overwriting the source record, so the
+                                            // original scan's history stays intact.
+                                            let newRecord = ScanRecord(
+                                                id: UUID().uuidString,
+                                                text: record.text,
+                                                processedText: processed != finalText ? processed : nil,
+                                                timestamp: Date(),
+                                                source: record.source,
+                                                injectedTo: NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
+                                                aiMode: SettingsStore.shared.aiMode
+                                            )
+                                            do { try ScanHistoryStore.shared.save(newRecord) }
+                                            catch { print("[History] Re-inject save failed: \(error)") }
                                         }
                                     }
                                 },

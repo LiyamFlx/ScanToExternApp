@@ -14,9 +14,12 @@ class PermissionsManager: ObservableObject {
 
     func checkAll() {
         hasAccessibility = AXIsProcessTrusted()
-        // Bluetooth permission is requested implicitly via CBCentralManager usage
-        // hasBluetooth will be updated from CBCentralManager state in BluetoothManager
-        print("Permissions check - Accessibility: \(hasAccessibility)")
+        // Bluetooth: derive from DeviceRegistry.status (BluetoothManager pushes state changes into it).
+        switch DeviceRegistry.shared.status {
+        case .bluetoothOff, .bluetoothUnauthorized: hasBluetooth = false
+        default: hasBluetooth = true
+        }
+        print("Permissions check - Accessibility: \(hasAccessibility) Bluetooth: \(hasBluetooth)")
     }
 
     func requestAccessibility() {

@@ -50,7 +50,12 @@ final class WebSocketBridge: NSObject {
 
         // Note: the port comes from requiredLocalEndpoint above; do NOT also pass `on:` or the
         // two conflict and the bind fails silently.
-        listener = try? NWListener(using: parameters)
+        do {
+            listener = try NWListener(using: parameters)
+        } catch {
+            print("[WS] FATAL: could not create listener on 127.0.0.1:\(WebSocketBridge.port) — \(error). Browser extension will not receive scans.")
+            return
+        }
 
         listener?.stateUpdateHandler = { [weak self] state in
             switch state {

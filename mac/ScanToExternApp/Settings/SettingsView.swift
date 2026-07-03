@@ -47,7 +47,8 @@ struct SettingsView: View {
                 Toggle("Enable scan history", isOn: $settings.historyEnabled)
                 Stepper("Max records: \(settings.historyLimit)", value: $settings.historyLimit, in: 10...2000, step: 50)
                 Button("Clear History Now") {
-                    try? ScanHistoryStore.shared.deleteAll()
+                    do { try ScanHistoryStore.shared.deleteAll() }
+                    catch { print("[History] Clear failed: \(error)") }
                 }
             }
             .tabItem { Label("History", systemImage: "clock") }

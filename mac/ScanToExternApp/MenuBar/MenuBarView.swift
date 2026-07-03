@@ -4,6 +4,7 @@ import AppKit
 struct MenuBarView: View {
     @EnvironmentObject var controller: MenuBarController
     @ObservedObject private var registry = DeviceRegistry.shared
+    @ObservedObject private var ai = AIProcessor.shared
 
     @State private var lastScanned: String = "No scans yet. Scan with your pen to start."
     @State private var aiEnabled: Bool = SettingsStore.shared.aiMode != "off"
@@ -68,6 +69,19 @@ struct MenuBarView: View {
                         .cornerRadius(6)
                 }
                 .frame(minHeight: 60, maxHeight: 90)
+            }
+
+            // AI error banner — surfaces the last AI processing failure so users know
+            // WHY their scanned text wasn't transformed (bad Claude key, offline, etc.).
+            if let err = ai.lastError {
+                HStack(alignment: .top, spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.orange)
+                    Text(err)
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                    Spacer()
+                }
             }
 
             Spacer(minLength: 16)
