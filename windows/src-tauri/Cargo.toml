@@ -59,6 +59,10 @@ chrono           = { version = "0.4", features = ["serde"] }
 # Secure credential storage (Windows Credential Manager on Windows, Keychain on Mac)
 keyring          = "3"
 
+# Local password hash for the Scanmarker account gate (already in the dependency tree
+# transitively via rustls; pinned directly since we now call it ourselves)
+sha2             = "0.10"
+
 # Windows-specific: UI Automation primary injector
 [target.'cfg(windows)'.dependencies]
 uiautomation     = "0.3"

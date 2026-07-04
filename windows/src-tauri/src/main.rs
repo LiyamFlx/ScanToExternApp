@@ -124,6 +124,28 @@ fn save_settings(new_settings: AppSettings, state: tauri::State<Arc<AppState>>) 
 }
 
 #[tauri::command]
+fn has_scanmarker_password() -> bool {
+    ai::credential_store::has_scanmarker_password()
+}
+
+#[tauri::command]
+fn verify_scanmarker_password(password: String) -> bool {
+    ai::credential_store::verify_scanmarker_password(&password)
+}
+
+#[tauri::command]
+fn save_scanmarker_account(email: String, password: String, state: tauri::State<Arc<AppState>>) {
+    let trimmed = email.trim().to_string();
+    if !trimmed.is_empty() {
+        state.settings.write().scanmarker_email = trimmed;
+    }
+    if !password.is_empty() {
+        ai::credential_store::save_scanmarker_password(&password).ok();
+    }
+    log::info!("[Settings] Scanmarker account saved");
+}
+
+#[tauri::command]
 fn inject_text(text: String, state: tauri::State<Arc<AppState>>) {
     let method = state.settings.read().injection_method.clone();
     injection::router::route_text(&text, &method, &state.ws_clients);
@@ -393,6 +415,9 @@ fn main() {
             get_status,
             get_settings,
             save_settings,
+            has_scanmarker_password,
+            verify_scanmarker_password,
+            save_scanmarker_account,
             inject_text,
             simulate_scan,
             get_history,

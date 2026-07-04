@@ -94,6 +94,19 @@
   <!-- AI -->
   <div class="tab-content" id="tab-ai">
     <div class="field">
+      <label>Scanmarker account email</label>
+      <div style="display:flex; gap:6px">
+        <input type="text" id="scanmarkerEmail" placeholder="you@example.com" style="flex:1" disabled>
+        <button class="btn" id="unlockEmailBtn" style="display:none" onclick="showUnlockPrompt()">Unlock</button>
+      </div>
+      <p class="note">Required for real OCR — the ScanMarker cloud service returns empty text for anonymous callers. Pen serial is read automatically over BLE.</p>
+    </div>
+    <div class="field" id="setPasswordField">
+      <label>Local password (optional)</label>
+      <input type="password" id="scanmarkerPassword" placeholder="Set a password to lock this email">
+      <p class="note">Not a real account — Scanmarker's service only checks the email above. This just confirms it's you before the email can be changed again on this PC.</p>
+    </div>
+    <div class="field">
       <label>AI Mode</label>
       <select id="aiMode" onchange="onAiModeChange()">
         <option value="off">Off</option>
@@ -158,9 +171,23 @@
     <button class="btn primary" onclick="save()">Save</button>
   </div>
 
+  <!-- Unlock modal for changing a password-locked Scanmarker email -->
+  <div id="unlockModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); align-items:center; justify-content:center;">
+    <div style="background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); padding:20px; width:280px;">
+      <p style="font-size:13px; margin-bottom:10px">Enter your local password to change the Scanmarker account email.</p>
+      <input type="password" id="unlockPasswordInput" placeholder="Password" style="width:100%; margin-bottom:6px">
+      <p id="unlockError" class="note" style="display:none; color:#e55;">Incorrect password.</p>
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:10px">
+        <button class="btn" onclick="hideUnlockPrompt()">Cancel</button>
+        <button class="btn primary" onclick="attemptUnlock()">Unlock</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const { invoke } = window.__TAURI__;
     let settings = {};
+    let emailUnlocked = false;
 
     function showTab(name) {
       document.querySelectorAll('.tab').forEach((t, i) => {
@@ -185,6 +212,29 @@
       }
     }
 
+    function showUnlockPrompt() {
+      document.getElementById('unlockError').style.display = 'none';
+      document.getElementById('unlockPasswordInput').value = '';
+      document.getElementById('unlockModal').style.display = 'flex';
+    }
+
+    function hideUnlockPrompt() {
+      document.getElementById('unlockModal').style.display = 'none';
+    }
+
+    async function attemptUnlock() {
+      const pw = document.getElementById('unlockPasswordInput').value;
+      const ok = await invoke('verify_scanmarker_password', { password: pw });
+      if (ok) {
+        emailUnlocked = true;
+        document.getElementById('scanmarkerEmail').disabled = false;
+        document.getElementById('unlockEmailBtn').style.display = 'none';
+        hideUnlockPrompt();
+      } else {
+        document.getElementById('unlockError').style.display = 'block';
+      }
+    }
+
     async function save() {
       settings.preview_enabled = document.getElementById('previewEnabled').checked;
       settings.preview_timeout_ms = Math.round(parseFloat(document.getElementById('previewTimeout').value) * 1000);
@@ -197,15 +247,28 @@
       settings.injection_method = document.getElementById('injectionMethod').value;
 
       await invoke('save_settings', { newSettings: settings });
+
+      // Scanmarker account (email + optional local password) saved separately — the
+      // email field is only editable when unlocked (or no password set yet).
+      const emailField = document.getElementById('scanmarkerEmail');
+      const newPassword = document.getElementById('scanmarkerPassword').value;
+      if (!emailField.disabled || newPassword) {
+        await invoke('save_scanmarker_account', {
+          email: emailField.value,
+          password: newPassword,
+        });
+      }
+
       // Close window
       const { getCurrent } = window.__TAURI__.window;
       getCurrent().hide();
     }
 
     async function init() {
-      const [s, status] = await Promise.all([
+      const [s, status, hasPassword] = await Promise.all([
         invoke('get_settings'),
         invoke('get_status'),
+        invoke('has_scanmarker_password'),
       ]);
       settings = s;
 
@@ -218,6 +281,14 @@
       document.getElementById('preferBluetooth').checked = s.prefer_bluetooth;
       document.getElementById('injectionMethod').value = s.injection_method;
       // Don't pre-fill API key for security
+
+      document.getElementById('scanmarkerEmail').value = s.scanmarker_email || '';
+      if (hasPassword) {
+        document.getElementById('unlockEmailBtn').style.display = 'inline-block';
+        // stays disabled until unlocked
+      } else {
+        document.getElementById('scanmarkerEmail').disabled = false;
+      }
 
       document.getElementById('connLabel').textContent =
         status.connected ? `Connected (${status.source})` : 'Disconnected';
