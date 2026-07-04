@@ -4,8 +4,7 @@
 /// Strategy:
 ///   1. Get the currently focused UI element via UIAutomation
 ///   2. Try ValuePattern (most input controls: Notepad, Word, Outlook fields)
-///   3. Try TextPattern for rich-text controls (Word document body, WordPad)
-///   4. Return false → caller falls back to clipboard injector
+///   3. Fall back to clipboard (router.rs) — TextPattern has no write method
 #[cfg(windows)]
 pub fn inject(text: &str) -> bool {
     use uiautomation::UIAutomation;
@@ -40,22 +39,10 @@ pub fn inject(text: &str) -> bool {
         }
     }
 
-    // Strategy 2: TextPattern — rich text controls (Word body, RichTextBox)
-    if let Ok(pattern) = focused.get_pattern::<uiautomation::patterns::UITextPattern>() {
-        if let Ok(ranges) = pattern.get_selection() {
-            if let Some(range) = ranges.first() {
-                match range.insert_text(text) {
-                    Ok(_) => {
-                        log::debug!("[UIA] TextPattern.insert_text succeeded");
-                        return true;
-                    }
-                    Err(e) => {
-                        log::debug!("[UIA] TextPattern.insert_text failed: {}", e);
-                    }
-                }
-            }
-        }
-    }
+    // Strategy 2: TextPattern exists on rich-text controls (Word body, RichTextBox)
+    // but ITextRangeProvider has no write method (GetText/Select/Move only — it's
+    // read/selection-oriented). There is no UIA-native way to insert text into a
+    // TextPattern-only control; router.rs falls back to clipboard+Ctrl-V for these.
 
     false
 }
