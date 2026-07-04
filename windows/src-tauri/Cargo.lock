@@ -3703,6 +3703,7 @@ dependencies = [
  "futures-util",
  "keyring",
  "log",
+ "parking_lot",
  "reqwest 0.12.28",
  "rusqlite",
  "serde",

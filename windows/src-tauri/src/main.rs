@@ -19,7 +19,8 @@ mod ai;
 mod history;
 mod preview;
 
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::Arc;
+use parking_lot::{Mutex, RwLock};
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
@@ -90,12 +91,12 @@ pub struct AppState {
 
 #[tauri::command]
 fn get_status(state: tauri::State<Arc<AppState>>) -> ConnectionStatus {
-    state.connection.read().unwrap().clone()
+    state.connection.read().clone()
 }
 
 #[tauri::command]
 fn get_settings(state: tauri::State<Arc<AppState>>) -> AppSettings {
-    state.settings.read().unwrap().clone()
+    state.settings.read().clone()
 }
 
 #[tauri::command]
@@ -107,7 +108,7 @@ fn save_settings(new_settings: AppSettings, state: tauri::State<Arc<AppState>>) 
         ai::credential_store::save_api_key(&api_key).ok();
     }
 
-    let mut s = state.settings.write().unwrap();
+    let mut s = state.settings.write();
     *s = new_settings;
     s.claude_api_key = String::new(); // don't keep in memory beyond necessity
 
@@ -116,7 +117,7 @@ fn save_settings(new_settings: AppSettings, state: tauri::State<Arc<AppState>>) 
 
 #[tauri::command]
 fn inject_text(text: String, state: tauri::State<Arc<AppState>>) {
-    let method = state.settings.read().unwrap().injection_method.clone();
+    let method = state.settings.read().injection_method.clone();
     injection::router::route_text(&text, &method, &state.ws_clients);
 }
 
@@ -136,7 +137,6 @@ fn get_history(
     state
         .history
         .lock()
-        .unwrap()
         .recent(limit)
         .unwrap_or_default()
 }
@@ -149,14 +149,13 @@ fn search_history(
     state
         .history
         .lock()
-        .unwrap()
         .search(&query)
         .unwrap_or_default()
 }
 
 #[tauri::command]
 fn clear_history(state: tauri::State<Arc<AppState>>) {
-    let _ = state.history.lock().unwrap().delete_all();
+    let _ = state.history.lock().delete_all();
 }
 
 #[tauri::command]
@@ -164,7 +163,6 @@ fn re_inject_record(id: String, app: AppHandle, state: tauri::State<Arc<AppState
     let record = state
         .history
         .lock()
-        .unwrap()
         .get_by_id(&id)
         .unwrap_or_default();
     if let Some(r) = record {
@@ -314,7 +312,7 @@ fn main() {
                 while let Ok((raw_text, source)) = scan_rx.recv().await {
                     log::info!("[Pipeline] Scan received ({} chars) via {}", raw_text.len(), source);
 
-                    let settings = pipeline_state.settings.read().unwrap().clone();
+                    let settings = pipeline_state.settings.read().clone();
 
                     // AI processing (cloud opt-in)
                     let processed = if settings.ai_mode != "off" && !settings.claude_api_key.is_empty() {
@@ -370,7 +368,7 @@ fn main() {
                                 injected_to: None,
                                 ai_mode: Some(settings.ai_mode.clone()),
                             };
-                            let _ = pipeline_state.history.lock().unwrap().save(&record);
+                            let _ = pipeline_state.history.lock().save(&record);
                         }
                     }
 

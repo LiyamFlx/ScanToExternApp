@@ -34,7 +34,7 @@ pub fn confirm_inject(
     app: AppHandle,
     state: tauri::State<std::sync::Arc<crate::AppState>>,
 ) {
-    let settings = state.settings.read().unwrap().clone();
+    let settings = state.settings.read().clone();
 
     // Hide preview
     if let Some(pw) = app.get_webview_window("preview") {
@@ -55,7 +55,7 @@ pub fn confirm_inject(
             injected_to: None,
             ai_mode: Some(settings.ai_mode.clone()),
         };
-        let _ = state.history.lock().unwrap().save(&record);
+        let _ = state.history.lock().save(&record);
     }
 
     log::info!("[Preview] Injected {} chars", text.len());

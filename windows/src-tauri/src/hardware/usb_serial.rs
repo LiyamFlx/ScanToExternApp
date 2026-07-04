@@ -2,7 +2,8 @@
 /// Baud: 115200, 8N1. Same text protocol as Bluetooth.
 /// Scans Windows COM ports for a Silicon Labs device (VID 0x10C4).
 use std::io::Read;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use parking_lot::RwLock;
 use std::time::Duration;
 
 use tokio::sync::broadcast;
@@ -56,7 +57,7 @@ async fn try_start(
 
         // Mark connected
         {
-            let mut conn = connection_clone.write().unwrap();
+            let mut conn = connection_clone.write();
             // Only mark USB connected if BT is not already connected
             if !conn.connected {
                 conn.connected = true;
@@ -92,7 +93,7 @@ async fn try_start(
                     log::warn!("[USB] Read error: {}", e);
                     // Mark disconnected
                     {
-                        let mut conn = connection_clone.write().unwrap();
+                        let mut conn = connection_clone.write();
                         if conn.source == "usb" {
                             conn.connected = false;
                             conn.device_name = String::new();

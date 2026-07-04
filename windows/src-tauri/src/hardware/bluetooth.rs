@@ -3,7 +3,8 @@
 ///
 /// Flow: scan for peripherals → connect → subscribe to TX characteristic →
 /// buffer incoming 20-byte BLE chunks → emit complete string after 300ms silence.
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use parking_lot::RwLock;
 use std::time::Duration;
 use tokio::time::Instant as TokioInstant;
 
@@ -77,7 +78,7 @@ async fn try_start(
 
                     // Mark disconnected
                     {
-                        let mut conn = connection.write().unwrap();
+                        let mut conn = connection.write();
                         conn.connected = false;
                         conn.device_name = String::new();
                         conn.source = String::new();
@@ -122,7 +123,7 @@ async fn connect_and_listen(
 
     // Mark connected
     {
-        let mut conn = connection.write().unwrap();
+        let mut conn = connection.write();
         conn.connected = true;
         conn.device_name = device_name.clone();
         conn.source = "bluetooth".to_string();

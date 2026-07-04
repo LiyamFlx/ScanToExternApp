@@ -5,6 +5,14 @@ import Foundation
 /// Restores previous clipboard contents after a short delay.
 /// Works universally but pollutes clipboard temporarily (hence fallback only).
 final class ClipboardInjector {
+    /// Monotonic counter — only the injection holding the latest generation at restore-time
+    /// is allowed to restore. Prevents two rapid scans (realistic for a scan pen used
+    /// continuously) from racing: without this, scan B's restore fires after scan A's and
+    /// clobbers the correctly-restored original back to scan A's leftover text.
+    private static var generation: Int = 0
+    private static var savedClipboard: String??  // outer optional = "not yet captured this burst"
+    private static let stateQueue = DispatchQueue(label: "com.topscan.ScanToExternApp.clipboardInjector")
+
     /// - Parameter targetApp: the app the paste should land in. We activate it first so
     ///   the synthetic Cmd+V is delivered to the right window (not our toast / menubar).
     func inject(_ text: String, targetApp: NSRunningApplication? = nil) {
@@ -14,16 +22,22 @@ final class ClipboardInjector {
             Thread.sleep(forTimeInterval: 0.12)
         }
 
-        let pasteboard = NSPasteboard.general
-        let previousContent = pasteboard.string(forType: .string)
+        let myGen: Int = Self.stateQueue.sync {
+            Self.generation += 1
+            if Self.savedClipboard == nil {
+                Self.savedClipboard = .some(NSPasteboard.general.string(forType: .string))
+            }
+            return Self.generation
+        }
 
+        let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
 
         // Post Cmd+V (virtual key 0x09 is 'V')
         guard let source = CGEventSource(stateID: .hidSystemState) else {
             print("[Clipboard] Failed to create CGEventSource")
-            restoreClipboard(previousContent)
+            restoreIfLatest(myGen)
             return
         }
 
@@ -45,17 +59,28 @@ final class ClipboardInjector {
         let delay: TimeInterval = isSlowPaster ? 0.7 : 0.45
 
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-            self.restoreClipboard(previousContent)
+            self.restoreIfLatest(myGen)
         }
 
         print("[Clipboard] Injected via Cmd+V fallback into \(bundleID) (\(text.count) chars, restore in \(delay)s)")
     }
 
-    private func restoreClipboard(_ previous: String?) {
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        if let prev = previous {
-            pasteboard.setString(prev, forType: .string)
+    /// Only restores if no newer injection has started since this one began — otherwise the
+    /// newer injection owns the eventual restore, and firing anyway would overwrite its write
+    /// with this (now stale) capture of the "original" clipboard.
+    private func restoreIfLatest(_ myGen: Int) {
+        Self.stateQueue.sync {
+            guard Self.generation == myGen else {
+                print("[Clipboard] Newer injection superseded this restore, skipping")
+                return
+            }
+            let previous = Self.savedClipboard.flatMap { $0 }
+            Self.savedClipboard = nil
+            let pasteboard = NSPasteboard.general
+            pasteboard.clearContents()
+            if let prev = previous {
+                pasteboard.setString(prev, forType: .string)
+            }
         }
     }
 }

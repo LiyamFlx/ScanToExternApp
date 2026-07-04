@@ -327,23 +327,30 @@ extension BluetoothManager: CBCentralManagerDelegate {
     }
 
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
-        BTLog.write("[BT] Connected to \(peripheral.name ?? "device")")
+        BTLog.write("[BT] Link-layer connected to \(peripheral.name ?? "device"), verifying Scanmarker GATT profile...")
         reconnectAttempts = 0
-        isConnected = true
         currentDeviceName = peripheral.name ?? "Scanmarker"
+        // NOTE: do NOT publish .connected / isConnected here. A successful CBCentralManager
+        // link-layer connect only means *some* BLE peripheral answered — it says nothing about
+        // whether it's actually a Scanmarker. Publishing "Connected" at this point caused a
+        // phantom-connected bug: any peripheral matching a stale persisted preferredDeviceID
+        // (or any device that happened to link-connect) showed as a real, verified pen with no
+        // GATT check at all. We wait for didDiscoverCharacteristicsFor to confirm the scan
+        // notify characteristic (c003) is actually present and subscribed before declaring
+        // .connected. See handleVerifiedConnection() below.
+        peripheral.discoverServices(nil)
+    }
+
+    /// Called once didDiscoverCharacteristicsFor confirms the Scanmarker notify characteristic
+    /// is present and subscribed. This is the ONLY place `.connected` should be published.
+    private func handleVerifiedConnection() {
+        guard let peripheral = self.peripheral, !isConnected else { return }
+        isConnected = true
         connectionState.send(.connected)
         deviceInfo.send((name: currentDeviceName, battery: nil))
         DeviceRegistry.shared.setStatus(.connected(currentDeviceName, .bluetooth))
-        // Persist pairing so next launch auto-connects.
         DeviceRegistry.shared.preferredDeviceID = peripheral.identifier.uuidString
-
-        // Discover ALL services on this peripheral. Passing an explicit filter here
-        // would silently exclude vendor-specific services — and many BLE scanners
-        // (confirmed for PenScanBLE) advertise a custom service UUID rather than
-        // the standard Nordic UART Service. The characteristics delegate below
-        // then auto-subscribes to every notify-capable characteristic on every
-        // service, so we catch scan data no matter which UUID the firmware uses.
-        peripheral.discoverServices(nil)
+        BTLog.write("[BT] Verified Scanmarker GATT profile — declaring connected: \(currentDeviceName)")
     }
 
     func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
@@ -422,9 +429,27 @@ extension BluetoothManager: CBPeripheralDelegate {
             // Everything else that supports notify or indicate: subscribe.
             if props.contains(.notify) || props.contains(.indicate) {
                 peripheral.setNotifyValue(true, for: characteristic)
-                if uuid == scanNotifyCharUUID { txCharacteristic = characteristic }
+                if uuid == scanNotifyCharUUID {
+                    txCharacteristic = characteristic
+                    // This is the actual proof-of-Scanmarker: only now do we know this
+                    // peripheral speaks the expected protocol. Declare connected here,
+                    // not on raw link-layer connect.
+                    handleVerifiedConnection()
+                }
                 BTLog.write("[BT]     → subscribed to notify on \(uuid.uuidString)")
             }
+        }
+
+        // If every service on this peripheral has now reported characteristics and we still
+        // haven't found the scan notify characteristic, this isn't a Scanmarker — disconnect
+        // and surface a clear failure instead of leaving the UI in "connecting" forever.
+        if txCharacteristic == nil,
+           let allServices = peripheral.services,
+           allServices.allSatisfy({ $0.characteristics != nil }) {
+            BTLog.write("[BT] No Scanmarker notify characteristic found on any service — not a Scanmarker device")
+            DeviceRegistry.shared.setStatus(.failed("This device doesn't look like a Scanmarker pen."))
+            centralManager.cancelPeripheralConnection(peripheral)
+            return
         }
 
         // If we've now found BOTH the notify subscription (c003) and the write char (c002),

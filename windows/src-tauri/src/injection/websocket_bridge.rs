@@ -8,15 +8,40 @@
 ///   { "type": "ack",   "id": "uuid" }                — extension → app
 ///   { "type": "ping" }                                — keep-alive
 use std::net::SocketAddr;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use parking_lot::Mutex;
 
 use futures_util::{SinkExt, StreamExt};
 use tauri::AppHandle;
 use tokio::net::TcpListener;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedSender};
-use tokio_tungstenite::{accept_async, tungstenite::Message};
+use tokio_tungstenite::{
+    accept_hdr_async,
+    tungstenite::{
+        handshake::server::{ErrorResponse, Request, Response},
+        Message,
+    },
+};
 
 pub type Clients = Arc<Mutex<Vec<UnboundedSender<Message>>>>;
+
+/// Rejects the handshake if the Origin header is an http(s) page origin — i.e. a browser tab,
+/// not our extension. Browsers set Origin on WebSocket connects and JS cannot override it, so
+/// this is a real (not spoofable) defense against any webpage doing
+/// `new WebSocket("ws://127.0.0.1:52731")` to silently read live scan broadcasts.
+/// Extension service workers send `chrome-extension://<id>` / `moz-extension://<id>` /
+/// `safari-web-extension://<id>`, or sometimes no Origin at all — both allowed.
+fn check_origin(req: &Request, resp: Response) -> Result<Response, ErrorResponse> {
+    if let Some(origin) = req.headers().get("Origin").and_then(|v| v.to_str().ok()) {
+        if origin.starts_with("http://") || origin.starts_with("https://") {
+            log::warn!("[WS] Rejected handshake from page origin: {}", origin);
+            return Err(ErrorResponse::new(Some(
+                "Rejected: connections from web pages are not allowed".into(),
+            )));
+        }
+    }
+    Ok(resp)
+}
 
 pub async fn start_server(clients: Clients, _app: AppHandle) {
     // SECURITY: bind to loopback only — refuse connections from LAN/internet
@@ -59,7 +84,7 @@ async fn handle_client(
     clients: Clients,
     addr: SocketAddr,
 ) {
-    let ws = match accept_async(raw).await {
+    let ws = match accept_hdr_async(raw, check_origin).await {
         Ok(ws) => ws,
         Err(e) => {
             log::warn!("[WS] Handshake failed from {}: {}", addr, e);
@@ -70,7 +95,7 @@ async fn handle_client(
     log::info!("[WS] Extension connected from {}", addr);
 
     let (tx, mut rx) = unbounded_channel::<Message>();
-    clients.lock().unwrap().push(tx);
+    clients.lock().push(tx);
 
     let (mut write, mut read) = ws.split();
 
@@ -102,7 +127,7 @@ async fn handle_client(
     }
 
     // Remove this client on disconnect
-    clients.lock().unwrap().retain(|c| !c.is_closed());
+    clients.lock().retain(|c| !c.is_closed());
     write_task.abort();
     log::info!("[WS] Extension disconnected from {}", addr);
 }
@@ -123,7 +148,7 @@ pub fn broadcast(clients: &Clients, text: &str, id: &str) {
     })
     .to_string();
 
-    let mut clients_guard = clients.lock().unwrap();
+    let mut clients_guard = clients.lock();
     clients_guard.retain(|client| {
         client.send(Message::Text(msg.clone())).is_ok()
     });

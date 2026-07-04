@@ -172,14 +172,28 @@ final class WebSocketBridge: NSObject {
             removeClient(ObjectIdentifier(client.connection)); return
         }
 
-        // Parse the Sec-WebSocket-Key header (case-insensitive).
+        // Parse the Sec-WebSocket-Key header (case-insensitive), and Origin for the
+        // same-scheme rejection below.
         var secKey: String?
+        var origin: String?
         for line in headerString.components(separatedBy: "\r\n") {
             let parts = line.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: true)
             guard parts.count == 2 else { continue }
-            if parts[0].trimmingCharacters(in: .whitespaces).lowercased() == "sec-websocket-key" {
-                secKey = parts[1].trimmingCharacters(in: .whitespaces)
-            }
+            let headerName = parts[0].trimmingCharacters(in: .whitespaces).lowercased()
+            let headerValue = parts[1].trimmingCharacters(in: .whitespaces)
+            if headerName == "sec-websocket-key" { secKey = headerValue }
+            if headerName == "origin" { origin = headerValue }
+        }
+
+        // SECURITY: reject connections whose Origin is an http(s) page origin. Browsers set
+        // this header on every WebSocket handshake and JS cannot override it, so this is a
+        // real (not spoofable) defense against a malicious webpage doing
+        // `new WebSocket("ws://127.0.0.1:52731")` to silently read live scan broadcasts.
+        // The browser extension's service worker sends a `chrome-extension://…` /
+        // `safari-web-extension://…` origin (or sometimes none) — both allowed through.
+        if let origin = origin, origin.hasPrefix("http://") || origin.hasPrefix("https://") {
+            print("[WS] Rejected handshake from page origin: \(origin)")
+            removeClient(ObjectIdentifier(client.connection)); return
         }
 
         guard let key = secKey else {
