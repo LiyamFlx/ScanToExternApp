@@ -24,6 +24,7 @@
 		4D8ED2CA0B68E5C0F85F3CD7 /* ClipboardInjector.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7882FADB63ADF95809A7DAC /* ClipboardInjector.swift */; };
 		4E827DFDDE1B2813914AE357 /* PreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2399C2F96890193EDA0A3CB9 /* PreviewView.swift */; };
 		52F42D5FCE11990F3447BC37 /* DeviceRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9D7506D61A20FCE3B9C0CFB /* DeviceRegistry.swift */; };
+		66B81C20E78884DA4B424953 /* ScanmarkerAccountWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D61F0DA4FE0F06EF41C99E0 /* ScanmarkerAccountWindowController.swift */; };
 		7BAE13D837DFFDD58DB86A68 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0179C8BEFED4137C3456A085 /* SettingsView.swift */; };
 		81C028AE0A19960F214AE61D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0998DC51DA4F026F016296E5 /* Assets.xcassets */; };
 		A754D46F824A93F74559FAB5 /* AXInjector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 193A137460CA525A17DEC0C5 /* AXInjector.swift */; };
@@ -67,6 +68,7 @@
 		873643B7F96B948F8787BEDC /* BluetoothManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BluetoothManager.swift; sourceTree = "<group>"; };
 		8B78814892B11DAE8742DE55 /* InjectionRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InjectionRouter.swift; sourceTree = "<group>"; };
 		9CFD57A64C6034A5860A0463 /* ClaudeProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeProcessor.swift; sourceTree = "<group>"; };
+		9D61F0DA4FE0F06EF41C99E0 /* ScanmarkerAccountWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanmarkerAccountWindowController.swift; sourceTree = "<group>"; };
 		A14A65077C1A27659A9EF53E /* ScanToExternApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ScanToExternApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A43E35AD3A89918A947A1951 /* ScanFlowState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanFlowState.swift; sourceTree = "<group>"; };
 		B1A1A3FFB2CB4DF48C5E9691 /* ScanHistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanHistoryStore.swift; sourceTree = "<group>"; };
@@ -159,6 +161,7 @@
 			isa = PBXGroup;
 			children = (
 				E2A851C541E987E44B4034B2 /* AppDelegate.swift */,
+				9D61F0DA4FE0F06EF41C99E0 /* ScanmarkerAccountWindowController.swift */,
 				C6D5B1C6DD847B87A7946FF7 /* ScanToExternAppApp.swift */,
 				7E8E5D0ED3BE3A5D98FEE977 /* WelcomeWindowController.swift */,
 			);
@@ -342,6 +345,7 @@
 				D91EC2845F1DC1106930BF08 /* ScanHistoryStore.swift in Sources */,
 				B43E91134B0296569B57E9F7 /* ScanRecord.swift in Sources */,
 				3F08034FEA2B61CC37D0B5ED /* ScanToExternAppApp.swift in Sources */,
+				66B81C20E78884DA4B424953 /* ScanmarkerAccountWindowController.swift in Sources */,
 				35EDB7447B75EF2BA47C064B /* SettingsStore.swift in Sources */,
 				7BAE13D837DFFDD58DB86A68 /* SettingsView.swift in Sources */,
 				E71E64DFFE52ED8AD051D83B /* USBSerialManager.swift in Sources */,

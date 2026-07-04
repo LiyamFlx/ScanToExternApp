@@ -146,6 +146,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
+        // First-launch account setup (email + local password gate). Shown once, skippable —
+        // the app keeps working with the shared default Scanmarker email until this runs.
+        let hasSeenAccountSetup = UserDefaults.standard.bool(forKey: "hasSeenScanmarkerAccountSetup")
+        if !isTestRun && !hasSeenAccountSetup {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                ScanmarkerAccountWindowController.show {
+                    UserDefaults.standard.set(true, forKey: "hasSeenScanmarkerAccountSetup")
+                }
+            }
+        }
+
         // Verification hook: when SCANAPP_SELFTEST=1, run the end-to-end injection
         // self-test automatically on launch, then quit. Used for headless verification.
         // Verification hook: SCANAPP_SELFTEST=1 runs the end-to-end injection self-test on

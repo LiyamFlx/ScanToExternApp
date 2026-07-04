@@ -3,6 +3,13 @@ import SwiftUI
 struct SettingsView: View {
     @ObservedObject var settings = SettingsStore.shared
 
+    // Local gate on changing the Scanmarker email — only relevant if a password was set
+    // during onboarding (or later). Not real auth; see KeychainManager's account section.
+    @State private var emailFieldUnlocked = false
+    @State private var showUnlockPrompt = false
+    @State private var unlockPasswordInput = ""
+    @State private var unlockError = false
+
     var body: some View {
         TabView {
             general
@@ -74,13 +81,55 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Scanmarker account email")
                     .font(.headline)
-                TextField("you@example.com", text: $settings.scanmarkerEmail)
-                    .textFieldStyle(.roundedBorder)
-                    .autocorrectionDisabled()
+                let isLocked = KeychainManager.hasScanmarkerPassword() && !emailFieldUnlocked
+                HStack {
+                    TextField("you@example.com", text: $settings.scanmarkerEmail)
+                        .textFieldStyle(.roundedBorder)
+                        .autocorrectionDisabled()
+                        .disabled(isLocked)
+                    if isLocked {
+                        Button("Unlock") { showUnlockPrompt = true }
+                    }
+                }
                 Text("Required for real OCR — the ScanMarker cloud service returns empty text for anonymous callers. Pen serial is read automatically over BLE.")
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+            }
+            .sheet(isPresented: $showUnlockPrompt) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Enter your local password to change the Scanmarker account email.")
+                        .font(.callout)
+                        .fixedSize(horizontal: false, vertical: true)
+                    SecureField("Password", text: $unlockPasswordInput)
+                        .textFieldStyle(.roundedBorder)
+                    if unlockError {
+                        Text("Incorrect password.")
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    }
+                    HStack {
+                        Spacer()
+                        Button("Cancel") {
+                            unlockPasswordInput = ""
+                            unlockError = false
+                            showUnlockPrompt = false
+                        }
+                        Button("Unlock") {
+                            if KeychainManager.verifyScanmarkerPassword(unlockPasswordInput) {
+                                emailFieldUnlocked = true
+                                unlockPasswordInput = ""
+                                unlockError = false
+                                showUnlockPrompt = false
+                            } else {
+                                unlockError = true
+                            }
+                        }
+                        .keyboardShortcut(.defaultAction)
+                    }
+                }
+                .padding(20)
+                .frame(width: 320)
             }
 
             Divider()
