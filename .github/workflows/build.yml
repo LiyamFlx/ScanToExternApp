@@ -1,0 +1,46 @@
+name: Build Verification
+on: [push, pull_request]
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm ci
+        working-directory: windows/src
+      - run: cargo install tauri-cli --locked
+      - run: cargo tauri build
+        working-directory: windows/src-tauri
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-installer
+          path: windows/src-tauri/target/release/bundle/**/*
+          if-no-files-found: warn
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install xcodegen
+        run: brew install xcodegen
+      - name: Generate project
+        working-directory: mac
+        run: xcodegen generate
+      - name: Build Release
+        working-directory: mac
+        run: |
+          xcodebuild -project ScanToExternApp.xcodeproj -scheme ScanToExternApp \
+            -configuration Release -derivedDataPath build build
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mac-app
+          path: mac/build/Build/Products/Release/ScanToExternApp.app
+          if-no-files-found: warn
