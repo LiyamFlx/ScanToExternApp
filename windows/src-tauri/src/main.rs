@@ -61,6 +61,12 @@ pub struct AppSettings {
     pub prefer_bluetooth: bool,
     pub injection_method: String, // "uia" | "clipboard"
     pub claude_api_key: String,   // loaded from Windows Credential Manager at runtime
+    /// Registered Scanmarker account email. The cloud OCR service (RunOCR_V7) gates real
+    /// recognition on this + the pen's serial — without it, scans return STATUS=OK with
+    /// empty text. Same requirement as Mac (SettingsStore.scanmarkerEmail).
+    pub scanmarker_email: String,
+    /// Scanmarker numeric language id. 220 = English (verified from vendor).
+    pub scanmarker_language_id: u32,
 }
 
 impl Default for AppSettings {
@@ -75,6 +81,8 @@ impl Default for AppSettings {
             prefer_bluetooth: true,
             injection_method: "uia".into(),
             claude_api_key: String::new(),
+            scanmarker_email: "liyam@scanmarker.com".into(),
+            scanmarker_language_id: 220,
         }
     }
 }
@@ -291,8 +299,9 @@ fn main() {
             // ── Hardware: Bluetooth ───────────────────────────────────────
             let scan_tx_bt = app_state.scan_tx.clone();
             let conn_bt = connection.clone();
+            let settings_bt = settings.clone();
             tauri::async_runtime::spawn(async move {
-                hardware::bluetooth::start(scan_tx_bt, conn_bt).await;
+                hardware::bluetooth::start(scan_tx_bt, conn_bt, settings_bt).await;
             });
 
             // ── Hardware: USB serial ──────────────────────────────────────

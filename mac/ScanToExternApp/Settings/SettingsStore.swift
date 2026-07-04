@@ -32,7 +32,7 @@ final class SettingsStore: ObservableObject {
     // Scanmarker cloud OCR (RunOCR_V7). The service returns STATUS=OK with an empty
     // RESULT unless it recognizes both a registered account email AND a paired pen
     // serial. Serial is auto-read from BLE Device Info (0x2A25); email is user-supplied.
-    @AppStorage("scanmarkerEmail")     var scanmarkerEmail: String = ""
+    @AppStorage("scanmarkerEmail")     var scanmarkerEmail: String = "liyam@scanmarker.com"
     // Language id the ScanMarker OCR service uses. 220 = English (verified from vendor JS).
     @AppStorage("scanmarkerLanguageId") var scanmarkerLanguageId: Int = 220
 
